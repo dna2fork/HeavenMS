@@ -16,8 +16,8 @@ function init() {
     rideTime = em.getTransportationTime(rideTime);
 }
 
-function setup() {
-	var eim = em.newInstance("KerningTrain_" + em.getProperty("player"));
+function setup(level, lobbyid) {
+	var eim = em.newInstance("KerningTrain_" + lobbyid);
 	return eim;
 }
 
@@ -35,8 +35,8 @@ function playerEntry(eim, player) {
         onRide = eim.getMapFactory().getMap(trainRide[myRide]);
         player.changeMap(onRide, onRide.getPortal(0));
         
-        player.getClient().getSession().write(MaplePacketCreator.getClock(rideTime / 1000));
-        player.getClient().getSession().write(MaplePacketCreator.earnTitleMessage("The next stop is at Kerning " + (myRide == 0 ? "Square" : "Subway") + " Station. The exit is to your left."));
+        player.getClient().announce(MaplePacketCreator.getClock(rideTime / 1000));
+        player.getClient().announce(MaplePacketCreator.earnTitleMessage("The next stop is at Kerning " + (myRide == 0 ? "Square" : "Subway") + " Station. The exit is to your left."));
         eim.schedule("timeOut", rideTime);
 }
 
@@ -66,3 +66,23 @@ function playerDisconnected(eim, player) {
 function cancelSchedule() {}
 
 function dispose(eim) {}
+
+
+// ---------- FILLER FUNCTIONS ----------
+
+function monsterValue(eim, mobid) {return 0;}
+
+function disbandParty(eim, player) {}
+
+function monsterKilled(mob, eim) {}
+
+function scheduledTimeout(eim) {}
+
+function changedLeader(eim, leader) {}
+
+function leftParty(eim, player) {}
+
+function clearPQ(eim) {}
+
+function allMonstersDead(eim) {}
+

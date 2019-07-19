@@ -37,7 +37,7 @@ var clearMap = 270050300;
 var minMapId = 270050100;
 var maxMapId = 270050300;
 
-var eventTime = 100;     // 100 minutes
+var eventTime = 140;     // 140 minutes
 
 var lobbyRange = [0, 0];
 
@@ -128,7 +128,7 @@ function scheduledTimeout(eim) {
 
 function changedMap(eim, player, mapid) {
     if (mapid < minMapId || mapid > maxMapId) {
-	if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+	if (eim.isExpeditionTeamLackingNow(true, minPlayers, player)) {
             eim.dropMessage(5, "[Expedition] Either the leader has quit the expedition or there is no longer the minimum number of members required to continue it.");
             eim.unregisterPlayer(player);
             end(eim);
@@ -169,7 +169,7 @@ function monsterRevive(eim, mob) {
 }
 
 function playerDisconnected(eim, player) {
-    if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+    if (eim.isExpeditionTeamLackingNow(true, minPlayers, player)) {
         eim.dropMessage(5, "[Expedition] Either the leader has quit the expedition or there is no longer the minimum number of members required to continue it.");
         eim.unregisterPlayer(player);
         end(eim);

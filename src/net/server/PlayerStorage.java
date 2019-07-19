@@ -84,7 +84,7 @@ public class PlayerStorage {
     public Collection<MapleCharacter> getAllCharacters() {
         rlock.lock();
         try {
-            return storage.values();
+            return new ArrayList<>(storage.values());
         } finally {
             rlock.unlock();
         }
@@ -102,7 +102,7 @@ public class PlayerStorage {
         for(MapleCharacter mc : chrList) {
             MapleClient client = mc.getClient();
             if(client != null) {
-                client.disconnect(true, false);
+                client.forceDisconnect();
             }
         }
         

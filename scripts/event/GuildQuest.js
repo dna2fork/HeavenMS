@@ -237,7 +237,7 @@ function changedMap(eim, player, mapid) {
 function afterChangedMap(eim, player, mapid) {
         if (mapid == 990000100) {
                 var texttt = "So, here is the brief. You guys should be warned that, once out on the fortress outskirts, anyone that would not be equipping the #b#t1032033##k will die instantly due to the deteriorated state of the air around there. That being said, once your team moves out, make sure to #bhit the glowing rocks#k in that region and #bequip the dropped item#k before advancing stages. That will protect you thoroughly from the air sickness. Good luck!";
-                player.getClient().getSession().write(Packages.tools.MaplePacketCreator.getNPCTalk(9040000, /*(byte)*/ 0, texttt, "00 00", /*(byte)*/ 0));
+                player.getAbstractPlayerInteraction().npcTalk(9040000, texttt);
         }
 }
 
@@ -254,16 +254,11 @@ function playerDead(eim, player) {
 function playerRevive(eim, player) { // player presses ok on the death pop up.
         if(eim.getIntProperty("canRevive") == 0) {
                 if (eim.isEventTeamLackingNow(true, minPlayers, player) && eim.getIntProperty("canJoin") == 0) {
-                        eim.unregisterPlayer(player);
-                        player.setHp(50);
-                        player.changeMap(exitMap);
-                        
+                        player.respawn(eim, exitMap);
                         end(eim);
                 }
                 else {
-                        eim.unregisterPlayer(player);
-                        player.setHp(50);
-                        player.changeMap(exitMap);
+                        player.respawn(eim, exitMap);
                 }
                 
                 return false;

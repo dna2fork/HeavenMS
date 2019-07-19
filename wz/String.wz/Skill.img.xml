@@ -4757,66 +4757,56 @@
   </imgdir>
   <imgdir name="9001000">
     <string name="name" value="Haste (Normal)"/>
-    <string name="desc" value="[Master Level : 1]\n Haste"/>
+    <string name="desc" value="[Master Level : 1]\n GM Haste"/>
     <string name="h1" value="Moving Speed + 40, Jump + 20 for 30 Minutes (Only for self)"/>
   </imgdir>
   <imgdir name="9001001">
     <string name="name" value="Super Dragon Roar"/>
-    <string name="desc" value="[Master Level : 1]\n Super Dragon Roar"/>
+    <string name="desc" value="[Master Level : 1]\n GM Super Dragon Roar"/>
     <string name="h1" value="Damage 1000%, Full Screen Attack"/>
   </imgdir>
   <imgdir name="9001002">
     <string name="name" value="Teleport"/>
-    <string name="desc" value="[Master Level : 1]\n Teleport"/>
-    <string name="h1" value="Teleport "/>
+    <string name="desc" value="[Master Level : 1]\n GM Teleport"/>
+    <string name="h1" value="Teleport yourself."/>
   </imgdir>
   <imgdir name="910">
     <string name="bookName" value="Admin. Skill Book (Super)"/>
   </imgdir>
   <imgdir name="9101000">
     <string name="name" value="Heal + Dispel"/>
-    <string name="desc" value="[Master Level : 1]\nHeal + Dispel"/>
-    <string name="h1" value="Heal + Dispel"/>
+    <string name="desc" value="[Master Level : 1]\n GM Heal + Dispel"/>
+    <string name="h1" value="Heal and Dispel nearby players."/>
   </imgdir>
   <imgdir name="9101001">
     <string name="name" value="Haste (Super)"/>
-    <string name="desc" value="[Master Level : 1]\n Haste"/>
+    <string name="desc" value="[Master Level : 1]\n GM Haste"/>
     <string name="h1" value="Moving Speed + 40, Jump + 20 for 30 Minutes"/>
   </imgdir>
   <imgdir name="9101002">
     <string name="name" value="Holy Symbol"/>
-    <string name="desc" value="[Master Level : 1]\n Holy Symbol"/>
+    <string name="desc" value="[Master Level : 1]\n GM Holy Symbol"/>
     <string name="h1" value="EXP 150% for 30 Minutes"/>
   </imgdir>
   <imgdir name="9101003">
     <string name="name" value="Bless"/>
-    <string name="desc" value="[Master Level : 1]\n Bless"/>
+    <string name="desc" value="[Master Level : 1]\n GM Bless"/>
     <string name="h1" value="Attack &amp; Magic Attack + 20, Others + 100 for 30 Minutes"/>
   </imgdir>
   <imgdir name="9101004">
     <string name="name" value="Hide"/>
-    <string name="desc" value="[Master Level : 1]\n Hide"/>
-    <string name="h1" value="Hide"/>
+    <string name="desc" value="[Master Level : 1]\n GM Hide"/>
+    <string name="h1" value="Hide yourself."/>
   </imgdir>
   <imgdir name="9101005">
     <string name="name" value="Resurrection"/>
-    <string name="desc" value="[Master Level : 1]\n Resurrection"/>
-    <string name="h1" value="Ressurect"/>
-  </imgdir>
-  <imgdir name="9101006">
-    <string name="name" value="Super Dragon Roar"/>
-    <string name="desc" value="[Master Level : 1]\n Super Dragon Roar"/>
-    <string name="h1" value="Damage 1000%, Full Screen Attack"/>
-  </imgdir>
-  <imgdir name="9101007">
-    <string name="name" value="Teleport"/>
-    <string name="desc" value="[Master Level : 1]\n Teleport"/>
-    <string name="h1" value="Teleport "/>
+    <string name="desc" value="[Master Level : 1]\n GM Resurrection"/>
+    <string name="h1" value="Ressurect nearby players."/>
   </imgdir>
   <imgdir name="9101008">
     <string name="name" value="Hyper Body"/>
-    <string name="desc" value="[Master Level : 1]\nIncrease the Max HP and Max MP for 15 mins."/>
-    <string name="h1" value="Max HP, Max MP 60% increase."/>
+    <string name="desc" value="[Master Level : 1]\n GM Hyper Body"/>
+    <string name="h1" value="Max HP, Max MP 60% increase on players nearby for 15 mins."/>
   </imgdir>
   <imgdir name="0001005">
     <string name="name" value="Echo of Hero"/>
@@ -4863,36 +4853,36 @@
   <imgdir name="1121001">
     <string name="name" value="Monster Magnet"/>
     <string name="desc" value="Pulls a monster from afar up close."/>
-    <string name="h1" value="MP - 10 , Range 100%, Success rate 42%"/>
-    <string name="h2" value="MP - 10 , Range 100%, Success rate 44%"/>
-    <string name="h3" value="MP - 10 , Range 100%, Success rate 46%"/>
-    <string name="h4" value="MP - 10 , Range 100%, Success rate 48%"/>
-    <string name="h5" value="MP - 10 , Range 100%, Success rate 50%"/>
-    <string name="h6" value="MP - 13 , Range 100%, Success rate 52%"/>
-    <string name="h7" value="MP - 13 , Range 100%, Success rate 54%"/>
-    <string name="h8" value="MP - 13 , Range 100%, Success rate 56%"/>
-    <string name="h9" value="MP - 13 , Range 100%, Success rate 58%"/>
-    <string name="h10" value="MP - 13 , Range 100%, Success rate 60%"/>
-    <string name="h11" value="MP - 18 , Range 150%, Success rate 62%"/>
-    <string name="h12" value="MP - 18 , Range 150%, Success rate 64%"/>
-    <string name="h13" value="MP - 18 , Range 150%, Success rate 66%"/>
-    <string name="h14" value="MP - 18 , Range 150%, Success rate 68%"/>
-    <string name="h15" value="MP - 18 , Range 150%, Success rate 70%"/>
-    <string name="h16" value="MP - 21 , Range 150%, Success rate 72%"/>
-    <string name="h17" value="MP - 21 , Range 150%, Success rate 74%"/>
-    <string name="h18" value="MP - 21 , Range 150%, Success rate 76%"/>
-    <string name="h19" value="MP - 21 , Range 150%, Success rate 78%"/>
-    <string name="h20" value="MP - 21 , Range 150%, Success rate 80%"/>
-    <string name="h21" value="MP - 26 , Range 200%, Success rate 82%"/>
-    <string name="h22" value="MP - 26 , Range 200%, Success rate 84%"/>
-    <string name="h23" value="MP - 26 , Range 200%, Success rate 86%"/>
-    <string name="h24" value="MP - 26 , Range 200%, Success rate 88%"/>
-    <string name="h25" value="MP - 26 , Range 200%, Success rate 90%"/>
-    <string name="h26" value="MP - 25 , Range 200%, Success rate 91%"/>
-    <string name="h27" value="MP - 24 , Range 200%, Success rate 92%"/>
-    <string name="h28" value="MP - 23 , Range 200%, Success rate 93%"/>
-    <string name="h29" value="MP - 22 , Range 200%, Success rate 94%"/>
-    <string name="h30" value="MP - 21 , Range 200%, Success rate 95%"/>
+    <string name="h1" value="MP - 10, Range 100%, pulls up to 3 enemies."/>
+    <string name="h2" value="MP - 10, Range 105%, pulls up to 3 enemies."/>
+    <string name="h3" value="MP - 10, Range 110%, pulls up to 3 enemies."/>
+    <string name="h4" value="MP - 10, Range 115%, pulls up to 3 enemies."/>
+    <string name="h5" value="MP - 10, Range 120%, pulls up to 3 enemies."/>
+    <string name="h6" value="MP - 13, Range 125%, pulls up to 3 enemies."/>
+    <string name="h7" value="MP - 13, Range 130%, pulls up to 3 enemies."/>
+    <string name="h8" value="MP - 13, Range 135%, pulls up to 4 enemies."/>
+    <string name="h9" value="MP - 13, Range 140%, pulls up to 4 enemies."/>
+    <string name="h10" value="MP - 13, Range 145%, pulls up to 4 enemies."/>
+    <string name="h11" value="MP - 18, Range 150%, pulls up to 4 enemies."/>
+    <string name="h12" value="MP - 18, Range 155%, pulls up to 4 enemies."/>
+    <string name="h13" value="MP - 18, Range 160%, pulls up to 4 enemies."/>
+    <string name="h14" value="MP - 18, Range 165%, pulls up to 4 enemies."/>
+    <string name="h15" value="MP - 18, Range 170%, pulls up to 5 enemies."/>
+    <string name="h16" value="MP - 21, Range 175%, pulls up to 5 enemies."/>
+    <string name="h17" value="MP - 21, Range 180%, pulls up to 5 enemies."/>
+    <string name="h18" value="MP - 21, Range 185%, pulls up to 5 enemies."/>
+    <string name="h19" value="MP - 21, Range 190%, pulls up to 5 enemies."/>
+    <string name="h20" value="MP - 21, Range 195%, pulls up to 5 enemies."/>
+    <string name="h21" value="MP - 26, Range 200%, pulls up to 5 enemies."/>
+    <string name="h22" value="MP - 26, Range 205%, pulls up to 6 enemies."/>
+    <string name="h23" value="MP - 26, Range 210%, pulls up to 6 enemies."/>
+    <string name="h24" value="MP - 26, Range 215%, pulls up to 6 enemies."/>
+    <string name="h25" value="MP - 26, Range 220%, pulls up to 6 enemies."/>
+    <string name="h26" value="MP - 25, Range 225%, pulls up to 6 enemies."/>
+    <string name="h27" value="MP - 24, Range 225%, pulls up to 6 enemies."/>
+    <string name="h28" value="MP - 23, Range 225%, pulls up to 6 enemies."/>
+    <string name="h29" value="MP - 22, Range 225%, pulls up to 7 enemies."/>
+    <string name="h30" value="MP - 21, Range 225%, pulls up to 7 enemies."/>
   </imgdir>
   <imgdir name="1121002">
     <string name="name" value="Power Stance"/>
@@ -5181,36 +5171,36 @@
   <imgdir name="1221001">
     <string name="name" value="Monster Magnet"/>
     <string name="desc" value="Pulls a monster from afar up close."/>
-    <string name="h1" value="MP - 10 , Range 100%, Success rate 42%"/>
-    <string name="h2" value="MP - 10 , Range 100%, Success rate 44%"/>
-    <string name="h3" value="MP - 10 , Range 100%, Success rate 46%"/>
-    <string name="h4" value="MP - 10 , Range 100%, Success rate 48%"/>
-    <string name="h5" value="MP - 10 , Range 100%, Success rate 50%"/>
-    <string name="h6" value="MP - 13 , Range 100%, Success rate 52%"/>
-    <string name="h7" value="MP - 13 , Range 100%, Success rate 54%"/>
-    <string name="h8" value="MP - 13 , Range 100%, Success rate 56%"/>
-    <string name="h9" value="MP - 13 , Range 100%, Success rate 58%"/>
-    <string name="h10" value="MP - 13 , Range 100%, Success rate 60%"/>
-    <string name="h11" value="MP - 18 , Range 150%, Success rate 62%"/>
-    <string name="h12" value="MP - 18 , Range 150%, Success rate 64%"/>
-    <string name="h13" value="MP - 18 , Range 150%, Success rate 66%"/>
-    <string name="h14" value="MP - 18 , Range 150%, Success rate 68%"/>
-    <string name="h15" value="MP - 18 , Range 150%, Success rate 70%"/>
-    <string name="h16" value="MP - 21 , Range 150%, Success rate 72%"/>
-    <string name="h17" value="MP - 21 , Range 150%, Success rate 74%"/>
-    <string name="h18" value="MP - 21 , Range 150%, Success rate 76%"/>
-    <string name="h19" value="MP - 21 , Range 150%, Success rate 78%"/>
-    <string name="h20" value="MP - 21 , Range 150%, Success rate 80%"/>
-    <string name="h21" value="MP - 26 , Range 200%, Success rate 82%"/>
-    <string name="h22" value="MP - 26 , Range 200%, Success rate 84%"/>
-    <string name="h23" value="MP - 26 , Range 200%, Success rate 86%"/>
-    <string name="h24" value="MP - 26 , Range 200%, Success rate 88%"/>
-    <string name="h25" value="MP - 26 , Range 200%, Success rate 90%"/>
-    <string name="h26" value="MP - 25 , Range 200%, Success rate 91%"/>
-    <string name="h27" value="MP - 24 , Range 200%, Success rate 92%"/>
-    <string name="h28" value="MP - 23 , Range 200%, Success rate 93%"/>
-    <string name="h29" value="MP - 22 , Range 200%, Success rate 94%"/>
-    <string name="h30" value="MP - 21 , Range 200%, Success rate 95%"/>
+    <string name="h1" value="MP - 10, Range 100%, pulls up to 3 enemies."/>
+    <string name="h2" value="MP - 10, Range 105%, pulls up to 3 enemies."/>
+    <string name="h3" value="MP - 10, Range 110%, pulls up to 3 enemies."/>
+    <string name="h4" value="MP - 10, Range 115%, pulls up to 3 enemies."/>
+    <string name="h5" value="MP - 10, Range 120%, pulls up to 3 enemies."/>
+    <string name="h6" value="MP - 13, Range 125%, pulls up to 3 enemies."/>
+    <string name="h7" value="MP - 13, Range 130%, pulls up to 3 enemies."/>
+    <string name="h8" value="MP - 13, Range 135%, pulls up to 4 enemies."/>
+    <string name="h9" value="MP - 13, Range 140%, pulls up to 4 enemies."/>
+    <string name="h10" value="MP - 13, Range 145%, pulls up to 4 enemies."/>
+    <string name="h11" value="MP - 18, Range 150%, pulls up to 4 enemies."/>
+    <string name="h12" value="MP - 18, Range 155%, pulls up to 4 enemies."/>
+    <string name="h13" value="MP - 18, Range 160%, pulls up to 4 enemies."/>
+    <string name="h14" value="MP - 18, Range 165%, pulls up to 4 enemies."/>
+    <string name="h15" value="MP - 18, Range 170%, pulls up to 5 enemies."/>
+    <string name="h16" value="MP - 21, Range 175%, pulls up to 5 enemies."/>
+    <string name="h17" value="MP - 21, Range 180%, pulls up to 5 enemies."/>
+    <string name="h18" value="MP - 21, Range 185%, pulls up to 5 enemies."/>
+    <string name="h19" value="MP - 21, Range 190%, pulls up to 5 enemies."/>
+    <string name="h20" value="MP - 21, Range 195%, pulls up to 5 enemies."/>
+    <string name="h21" value="MP - 26, Range 200%, pulls up to 5 enemies."/>
+    <string name="h22" value="MP - 26, Range 205%, pulls up to 6 enemies."/>
+    <string name="h23" value="MP - 26, Range 210%, pulls up to 6 enemies."/>
+    <string name="h24" value="MP - 26, Range 215%, pulls up to 6 enemies."/>
+    <string name="h25" value="MP - 26, Range 220%, pulls up to 6 enemies."/>
+    <string name="h26" value="MP - 25, Range 225%, pulls up to 6 enemies."/>
+    <string name="h27" value="MP - 24, Range 225%, pulls up to 6 enemies."/>
+    <string name="h28" value="MP - 23, Range 225%, pulls up to 6 enemies."/>
+    <string name="h29" value="MP - 22, Range 225%, pulls up to 7 enemies."/>
+    <string name="h30" value="MP - 21, Range 225%, pulls up to 7 enemies."/>
   </imgdir>
   <imgdir name="1221002">
     <string name="name" value="Power Stance"/>
@@ -5527,36 +5517,36 @@
   <imgdir name="1321001">
     <string name="name" value="Monster Magnet"/>
     <string name="desc" value="Pulls a monster from afar up close."/>
-    <string name="h1" value="MP - 10 , Range 100%, Success rate 42%"/>
-    <string name="h2" value="MP - 10 , Range 100%, Success rate 44%"/>
-    <string name="h3" value="MP - 10 , Range 100%, Success rate 46%"/>
-    <string name="h4" value="MP - 10 , Range 100%, Success rate 48%"/>
-    <string name="h5" value="MP - 10 , Range 100%, Success rate 50%"/>
-    <string name="h6" value="MP - 13 , Range 100%, Success rate 52%"/>
-    <string name="h7" value="MP - 13 , Range 100%, Success rate 54%"/>
-    <string name="h8" value="MP - 13 , Range 100%, Success rate 56%"/>
-    <string name="h9" value="MP - 13 , Range 100%, Success rate 58%"/>
-    <string name="h10" value="MP - 13 , Range 100%, Success rate 60%"/>
-    <string name="h11" value="MP - 18 , Range 150%, Success rate 62%"/>
-    <string name="h12" value="MP - 18 , Range 150%, Success rate 64%"/>
-    <string name="h13" value="MP - 18 , Range 150%, Success rate 66%"/>
-    <string name="h14" value="MP - 18 , Range 150%, Success rate 68%"/>
-    <string name="h15" value="MP - 18 , Range 150%, Success rate 70%"/>
-    <string name="h16" value="MP - 21 , Range 150%, Success rate 72%"/>
-    <string name="h17" value="MP - 21 , Range 150%, Success rate 74%"/>
-    <string name="h18" value="MP - 21 , Range 150%, Success rate 76%"/>
-    <string name="h19" value="MP - 21 , Range 150%, Success rate 78%"/>
-    <string name="h20" value="MP - 21 , Range 150%, Success rate 80%"/>
-    <string name="h21" value="MP - 26 , Range 200%, Success rate 82%"/>
-    <string name="h22" value="MP - 26 , Range 200%, Success rate 84%"/>
-    <string name="h23" value="MP - 26 , Range 200%, Success rate 86%"/>
-    <string name="h24" value="MP - 26 , Range 200%, Success rate 88%"/>
-    <string name="h25" value="MP - 26 , Range 200%, Success rate 90%"/>
-    <string name="h26" value="MP - 25 , Range 200%, Success rate 91%"/>
-    <string name="h27" value="MP - 24 , Range 200%, Success rate 92%"/>
-    <string name="h28" value="MP - 23 , Range 200%, Success rate 93%"/>
-    <string name="h29" value="MP - 22 , Range 200%, Success rate 94%"/>
-    <string name="h30" value="MP - 21 , Range 200%, Success rate 95%"/>
+    <string name="h1" value="MP - 10, Range 100%, pulls up to 3 enemies."/>
+    <string name="h2" value="MP - 10, Range 105%, pulls up to 3 enemies."/>
+    <string name="h3" value="MP - 10, Range 110%, pulls up to 3 enemies."/>
+    <string name="h4" value="MP - 10, Range 115%, pulls up to 3 enemies."/>
+    <string name="h5" value="MP - 10, Range 120%, pulls up to 3 enemies."/>
+    <string name="h6" value="MP - 13, Range 125%, pulls up to 3 enemies."/>
+    <string name="h7" value="MP - 13, Range 130%, pulls up to 3 enemies."/>
+    <string name="h8" value="MP - 13, Range 135%, pulls up to 4 enemies."/>
+    <string name="h9" value="MP - 13, Range 140%, pulls up to 4 enemies."/>
+    <string name="h10" value="MP - 13, Range 145%, pulls up to 4 enemies."/>
+    <string name="h11" value="MP - 18, Range 150%, pulls up to 4 enemies."/>
+    <string name="h12" value="MP - 18, Range 155%, pulls up to 4 enemies."/>
+    <string name="h13" value="MP - 18, Range 160%, pulls up to 4 enemies."/>
+    <string name="h14" value="MP - 18, Range 165%, pulls up to 4 enemies."/>
+    <string name="h15" value="MP - 18, Range 170%, pulls up to 5 enemies."/>
+    <string name="h16" value="MP - 21, Range 175%, pulls up to 5 enemies."/>
+    <string name="h17" value="MP - 21, Range 180%, pulls up to 5 enemies."/>
+    <string name="h18" value="MP - 21, Range 185%, pulls up to 5 enemies."/>
+    <string name="h19" value="MP - 21, Range 190%, pulls up to 5 enemies."/>
+    <string name="h20" value="MP - 21, Range 195%, pulls up to 5 enemies."/>
+    <string name="h21" value="MP - 26, Range 200%, pulls up to 5 enemies."/>
+    <string name="h22" value="MP - 26, Range 205%, pulls up to 6 enemies."/>
+    <string name="h23" value="MP - 26, Range 210%, pulls up to 6 enemies."/>
+    <string name="h24" value="MP - 26, Range 215%, pulls up to 6 enemies."/>
+    <string name="h25" value="MP - 26, Range 220%, pulls up to 6 enemies."/>
+    <string name="h26" value="MP - 25, Range 225%, pulls up to 6 enemies."/>
+    <string name="h27" value="MP - 24, Range 225%, pulls up to 6 enemies."/>
+    <string name="h28" value="MP - 23, Range 225%, pulls up to 6 enemies."/>
+    <string name="h29" value="MP - 22, Range 225%, pulls up to 7 enemies."/>
+    <string name="h30" value="MP - 21, Range 225%, pulls up to 7 enemies."/>
   </imgdir>
   <imgdir name="1321002">
     <string name="name" value="Power Stance"/>
@@ -8020,7 +8010,7 @@
     <string name="h7" value="Uses 10% of MaxHP, Uses 85% of the used HP on MP, 40 seconds until next use"/>
     <string name="h8" value="Uses 10% of MaxHP, Uses 90% of the used HP on MP, 35 seconds until next use"/>
     <string name="h9" value="Uses 10% of MaxHP, Uses 95% of the used HP on MP, 30 seconds until next use"/>
-    <string name="h10" value="Uses 10% of MaxHP, Uses 100%of the used HP on MP 회대기 seconds until next use시간 25초"/>
+    <string name="h10" value="Uses 10% of MaxHP, Uses 100% of the used HP on MP, 25 seconds until next use"/>
   </imgdir>
   <imgdir name="5101006">
     <string name="name" value="Knuckler Booster"/>
@@ -8712,26 +8702,26 @@
   <imgdir name="5121003">
     <string name="name" value="Super Transformation"/>
     <string name="desc" value="Increases power to extreme levels for 120 seconds. \nAvailable skills : Changes have been made so that while using the Viper skill, Super Transform, you can now use all skills excluding the Oak Barrel and the Double Fire. \nRequired Skill : #cLevel 20 of Transformation#"/>
-    <string name="h1" value="MP -22; weapon &amp; magic att. +41, waiting time until next use : 740 sec."/>
-    <string name="h2" value="MP -24; weapon &amp; magic att. +42, waiting time until next use : 720 sec."/>
-    <string name="h3" value="MP -26; weapon &amp; magic att. +43, waiting time until next use : 700 sec."/>
-    <string name="h4" value="MP -28; weapon &amp; magic att. +44, waiting time until next use : 680 sec."/>
-    <string name="h5" value="MP -30; weapon &amp; magic att. +45, waiting time until next use : 660 sec."/>
-    <string name="h6" value="MP -32; weapon &amp; magic att. +46, waiting time until next use : 640 sec."/>
-    <string name="h7" value="MP -34; weapon &amp; magic att. +47, waiting time until next use : 620 sec."/>
-    <string name="h8" value="MP -36; weapon &amp; magic att. +48, waiting time until next use : 600 sec."/>
-    <string name="h9" value="MP -38; weapon &amp; magic att. +49, waiting time until next use : 580 sec."/>
-    <string name="h10" value="MP -40; weapon &amp; magic att. +50, waiting time until next use : 560 sec."/>
-    <string name="h11" value="MP -42; weapon &amp; magic att. +51, waiting time until next use : 540 sec."/>
-    <string name="h12" value="MP -44; weapon &amp; magic att. +52, waiting time until next use : 520 sec."/>
-    <string name="h13" value="MP -46; weapon &amp; magic att. +53, waiting time until next use : 500 sec."/>
-    <string name="h14" value="MP -48; weapon &amp; magic att. +54, waiting time until next use : 480 sec."/>
-    <string name="h15" value="MP -50; weapon &amp; magic att. +55, waiting time until next use : 460 sec."/>
-    <string name="h16" value="MP -52; weapon &amp; magic att. +56, waiting time until next use : 440 sec."/>
-    <string name="h17" value="MP -54; weapon &amp; magic att. +57, waiting time until next use : 420 sec."/>
-    <string name="h18" value="MP -56; weapon &amp; magic att. +58, waiting time until next use : 400 sec."/>
-    <string name="h19" value="MP -58; weapon &amp; magic att. +59, waiting time until next use : 380 sec."/>
-    <string name="h20" value="MP -60; weapon &amp; magic att. +60, waiting time until next use : 360 sec."/>
+    <string name="h1" value="MP -22; weapon &amp; magic def. +41, waiting time until next use : 740 sec."/>
+    <string name="h2" value="MP -24; weapon &amp; magic def. +42, waiting time until next use : 720 sec."/>
+    <string name="h3" value="MP -26; weapon &amp; magic def. +43, waiting time until next use : 700 sec."/>
+    <string name="h4" value="MP -28; weapon &amp; magic def. +44, waiting time until next use : 680 sec."/>
+    <string name="h5" value="MP -30; weapon &amp; magic def. +45, waiting time until next use : 660 sec."/>
+    <string name="h6" value="MP -32; weapon &amp; magic def. +46, waiting time until next use : 640 sec."/>
+    <string name="h7" value="MP -34; weapon &amp; magic def. +47, waiting time until next use : 620 sec."/>
+    <string name="h8" value="MP -36; weapon &amp; magic def. +48, waiting time until next use : 600 sec."/>
+    <string name="h9" value="MP -38; weapon &amp; magic def. +49, waiting time until next use : 580 sec."/>
+    <string name="h10" value="MP -40; weapon &amp; magic def. +50, waiting time until next use : 560 sec."/>
+    <string name="h11" value="MP -42; weapon &amp; magic def. +51, waiting time until next use : 540 sec."/>
+    <string name="h12" value="MP -44; weapon &amp; magic def. +52, waiting time until next use : 520 sec."/>
+    <string name="h13" value="MP -46; weapon &amp; magic def. +53, waiting time until next use : 500 sec."/>
+    <string name="h14" value="MP -48; weapon &amp; magic def. +54, waiting time until next use : 480 sec."/>
+    <string name="h15" value="MP -50; weapon &amp; magic def. +55, waiting time until next use : 460 sec."/>
+    <string name="h16" value="MP -52; weapon &amp; magic def. +56, waiting time until next use : 440 sec."/>
+    <string name="h17" value="MP -54; weapon &amp; magic def. +57, waiting time until next use : 420 sec."/>
+    <string name="h18" value="MP -56; weapon &amp; magic def. +58, waiting time until next use : 400 sec."/>
+    <string name="h19" value="MP -58; weapon &amp; magic def. +59, waiting time until next use : 380 sec."/>
+    <string name="h20" value="MP -60; weapon &amp; magic def. +60, waiting time until next use : 360 sec."/>
   </imgdir>
   <imgdir name="5121004">
     <string name="name" value="Demolition"/>
@@ -11675,28 +11665,28 @@
   </imgdir>
   <imgdir name="9001003">
     <string name="name" value="Bless"/>
-    <string name="desc" value="[Master Level:1]\nIncreases all abilities of those around you for 15 minutes."/>
+    <string name="desc" value="[Master Level:1]\n GM Bless"/>
     <string name="h1" value="Attack and Magic Ability +20, and other abilities +100 for 30 minutes."/>
   </imgdir>
   <imgdir name="9001004">
     <string name="name" value="Hide"/>
-    <string name="desc" value="[Master Level : 1]\n Hide"/>
-    <string name="h1" value="Hide"/>
+    <string name="desc" value="[Master Level : 1]\n GM Hide"/>
+    <string name="h1" value="Hide yourself."/>
   </imgdir>
   <imgdir name="9001005">
     <string name="name" value="Resurrection"/>
-    <string name="desc" value="[Master Level : 1]\n Resurrection"/>
-    <string name="h1" value="Ressurect"/>
+    <string name="desc" value="[Master Level : 1]\n GM Resurrection"/>
+    <string name="h1" value="Ressurect nearby players."/>
   </imgdir>
   <imgdir name="9001006">
     <string name="name" value="Super Dragon Roar"/>
-    <string name="desc" value="[Master Level : 1]\n Super Dragon Roar"/>
+    <string name="desc" value="[Master Level : 1]\n GM Super Dragon Roar"/>
     <string name="h1" value="Damage 1000%, Full Screen Attack"/>
   </imgdir>
   <imgdir name="9001007">
     <string name="name" value="Teleport"/>
-    <string name="desc" value="[Master Level : 1]\n Teleport"/>
-    <string name="h1" value="Teleport "/>
+    <string name="desc" value="[Master Level : 1]\n GM Teleport"/>
+    <string name="h1" value="Teleport yourself."/>
   </imgdir>
   <imgdir name="9001009">
     <string name="name" value="ADMIN_ANTIMACRO"/>
@@ -11705,8 +11695,8 @@
   </imgdir>
   <imgdir name="9001008">
     <string name="name" value="Hyper Body"/>
-    <string name="desc" value="[Master Level:1]\nMax HP, Max MP increases for 15 minutes."/>
-    <string name="h1" value="Max HP, Max MP 60% increase."/>
+    <string name="desc" value="[Master Level:1]\n GM Hyper Body"/>
+    <string name="h1" value="Max HP, Max MP 60% increase on players nearby for 15 minutes."/>
   </imgdir>
   <imgdir name="10001014">
     <string name="name" value="Spaceship"/>
@@ -12717,7 +12707,7 @@
   <imgdir name="0000100">
     <string name="name" value="Chair Mastery"/>
     <string name="desc" value="[Master Level : 1]\nBonus recovery gain from using map chairs throughout the world."/>
-    <string name="h1" value="Passively recover extra amounts of HP and MP by resting on map chairs."/>
+    <string name="h1" value="Passively recover extra amounts of HP and MP by resting on map chairs. Heal amount is calculated over a percentage of the character&apos;s base pool."/>
   </imgdir>
   <imgdir name="10000100">
     <string name="name" value="Chair Mastery"/>

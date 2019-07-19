@@ -41,10 +41,9 @@ import server.gachapon.MapleGachapon;
 import server.gachapon.MapleGachapon.MapleGachaponItem;
 import server.life.MaplePlayerNPC;
 import server.maps.MapleMap;
-import server.maps.MapleMapFactory;
+import server.maps.MapleMapManager;
 import server.partyquest.Pyramid;
 import server.partyquest.Pyramid.PyramidMode;
-import server.quest.MapleQuest;
 import tools.LogHelper;
 import tools.MaplePacketCreator;
 import client.MapleCharacter;
@@ -57,31 +56,76 @@ import client.SkillFactory;
 import client.inventory.Item;
 import client.inventory.ItemFactory;
 import client.inventory.MaplePet;
+import constants.GameConstants;
 import constants.ItemConstants;
-import java.awt.Point;
-import java.util.Arrays;
+import constants.LanguageConstants;
+import net.server.PlayerStorage;
+import net.server.channel.Channel;
+import net.server.coordinator.matchchecker.MatchCheckerListenerFactory.MatchCheckerType;
+import server.MapleMarriage;
+import server.MapleSkillbookInformationProvider;
+import server.MapleSkillbookInformationProvider.SkillBookEntry;
+import server.TimerManager;
+import server.life.MapleLifeFactory;
 import server.maps.MapleMapObject;
 import server.maps.MapleMapObjectType;
+import server.expeditions.MapleExpedition;
+import server.expeditions.MapleExpeditionType;
+import server.partyquest.AriantColiseum;
+import server.partyquest.MonsterCarnival;
+import tools.packets.Wedding;
+
+import java.awt.Point;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  *
  * @author Matze
  */
 public class NPCConversationManager extends AbstractPlayerInteraction {
+        
 	private int npc;
         private int npcOid;
 	private String scriptName;
 	private String getText;
+        private boolean itemScript;
+        private List<MaplePartyCharacter> otherParty;
         
-        public NPCConversationManager(MapleClient c, int npc, String scriptName) {
-               this(c, npc, -1, scriptName);
+        private Map<Integer, String> npcDefaultTalks = new HashMap<>();
+        
+        private String getDefaultTalk(int npcid) {
+            String talk = npcDefaultTalks.get(npcid);
+            if (talk == null) {
+                talk = MapleLifeFactory.getNPCDefaultTalk(npcid);
+                npcDefaultTalks.put(npcid, talk);
+            }
+            
+            return talk;
         }
         
-	public NPCConversationManager(MapleClient c, int npc, int oid, String scriptName) {
+        public NPCConversationManager(MapleClient c, int npc, String scriptName) {
+               this(c, npc, -1, scriptName, false);
+        }
+        
+        public NPCConversationManager(MapleClient c, int npc, List<MaplePartyCharacter> otherParty, boolean test) {
+                super(c);
+                this.c = c;
+                this.npc = npc;
+                this.otherParty = otherParty;
+        }
+        
+	public NPCConversationManager(MapleClient c, int npc, int oid, String scriptName, boolean itemScript) {
 		super(c);
 		this.npc = npc;
                 this.npcOid = oid;
 		this.scriptName = scriptName;
+                this.itemScript = itemScript;
 	}
 
 	public int getNpc() {
@@ -95,9 +139,18 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 	public String getScriptName() {
 		return scriptName;
 	}
+        
+        public boolean isItemScript() {
+                return itemScript;
+        }
+        
+        public void resetItemScript() {
+                this.itemScript = false;
+        }
 
 	public void dispose() {
 		NPCScriptManager.getInstance().dispose(this);
+                getClient().announce(MaplePacketCreator.enableActions());
 	}
 
 	public void sendNext(String text) {
@@ -115,6 +168,10 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 	public void sendOk(String text) {
 		getClient().announce(MaplePacketCreator.getNPCTalk(npc, (byte) 0, text, "00 00", (byte) 0));
 	}
+        
+        public void sendDefault() {
+                sendOk(getDefaultTalk(npc));
+        }
 
 	public void sendYesNo(String text) {
 		getClient().announce(MaplePacketCreator.getNPCTalk(npc, (byte) 1, text, "", (byte) 0));
@@ -157,7 +214,12 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 	}
 
 	public void sendStyle(String text, int styles[]) {
-		getClient().announce(MaplePacketCreator.getNPCTalkStyle(npc, text, styles));
+                if (styles.length > 0) {
+                        getClient().announce(MaplePacketCreator.getNPCTalkStyle(npc, text, styles));
+                } else {    // thanks Conrad for noticing empty styles crashing players
+                        sendOk("Sorry, there are no options of cosmetics available for you here at the moment.");
+                        dispose();
+                }
 	}
 
 	public void sendGetNumber(String text, int def, int min, int max) {
@@ -197,76 +259,34 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 		return getPlayer().getJob();
 	}
 
-	public void startQuest(short id) {
-		try {
-			MapleQuest.getInstance(id).forceStart(getPlayer(), npc);
-		} catch (NullPointerException ex) {
-                        ex.printStackTrace();
-		}
-	}
-
-	public void completeQuest(short id) {
-		try {
-			MapleQuest.getInstance(id).forceComplete(getPlayer(), npc);
-		} catch (NullPointerException ex) {
-                        ex.printStackTrace();
-		}
-	}
-
+	@Override
         public boolean forceStartQuest(int id) {
-                return MapleQuest.getInstance(id).forceStart(getPlayer(), npc);
+                return forceStartQuest(id, npc);
         }
-
+        
+        @Override
         public boolean forceCompleteQuest(int id) {
-                return MapleQuest.getInstance(id).forceComplete(getPlayer(), npc);
+                return forceCompleteQuest(id, npc);
         }
         
-	public void startQuest(int id) {
-		try {
-			MapleQuest.getInstance(id).forceStart(getPlayer(), npc);
-		} catch (NullPointerException ex) {
-                        ex.printStackTrace();
-		}
-	}
-
-	public void completeQuest(int id) {
-		try {
-			MapleQuest.getInstance(id).forceComplete(getPlayer(), npc);
-		} catch (NullPointerException ex) {
-                        ex.printStackTrace();
-		}
-	}
-        
-        public void startQuest(short id, int npcId) {
-                try {
-                        MapleQuest.getInstance(id).forceStart(getPlayer(), npcId);
-                } catch (NullPointerException ex) {
-                        ex.printStackTrace();
-                }
+        @Override
+        public boolean startQuest(short id) {
+                return startQuest((int) id);
         }
         
-        public void startQuest(int id, int npcId) {
-                try {
-                        MapleQuest.getInstance(id).forceStart(getPlayer(), npcId);
-                } catch (NullPointerException ex) {
-                        ex.printStackTrace();
-                }
+        @Override
+        public boolean completeQuest(short id) {
+                return completeQuest((int) id);
         }
         
-        public void completeQuest(short id, int npcId) {
-                try {
-                        MapleQuest.getInstance(id).forceComplete(getPlayer(), npcId);
-                } catch (NullPointerException ex) {
-                        ex.printStackTrace();
-                }
+        @Override
+        public boolean startQuest(int id) {
+                return startQuest(id, npc);
         }
         
-        public void completeQuest(int id, int npcId) {
-                try {
-                        MapleQuest.getInstance(id).forceComplete(getPlayer(), npcId);
-                } catch (NullPointerException ex) {
-                        ex.printStackTrace();
-                }
+        @Override
+        public boolean completeQuest(int id) {
+                return completeQuest(id, npc);
         }
         
 	public int getMeso() {
@@ -367,8 +387,8 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 		getPlayer().changeJob(job);
 	}
 
-	public MapleJob getJobName(int id) {
-		return MapleJob.getById(id);
+	public String getJobName(int id) {
+		return GameConstants.getJobName(id);
 	}
 
 	public MapleStatEffect getItemEffect(int itemId) {
@@ -422,6 +442,8 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
                 
                 Server.getInstance().allianceMessage(alliance.getId(), MaplePacketCreator.getGuildAlliances(alliance, c.getWorld()), -1, -1);
                 Server.getInstance().allianceMessage(alliance.getId(), MaplePacketCreator.allianceNotice(alliance.getId(), alliance.getNotice()), -1, -1);
+                
+                c.announce(MaplePacketCreator.updateAllianceInfo(alliance, c.getWorld()));  // thanks Vcoc for finding an alliance update to leader issue
         }
 
 	public void disbandAlliance(MapleClient c, int allianceId) {
@@ -497,7 +519,7 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 		PyramidMode mod = PyramidMode.valueOf(mode);
 
 		MapleParty partyz = getPlayer().getParty();
-		MapleMapFactory mf = c.getChannelServer().getMapFactory();
+		MapleMapManager mapManager = c.getChannelServer().getMapFactory();
 
 		MapleMap map = null;
 		int mapid = 926010100;
@@ -507,7 +529,7 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 		mapid += (mod.getMode() * 1000);
 
 		for (byte b = 0; b < 5; b++) {//They cannot warp to the next map before the timer ends (:
-			map = mf.getMap(mapid + b);
+			map = mapManager.getMap(mapid + b);
 			if (map.getCharacters().size() > 0) {
 				continue;
 			} else {
@@ -529,6 +551,37 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 		return true;
 	}
         
+        public boolean itemExists(int itemid) {
+                return MapleItemInformationProvider.getInstance().getName(itemid) != null;
+        }
+        
+        public int getCosmeticItem(int itemid) {
+                if (itemExists(itemid)) {
+                        return itemid;
+                }
+                
+                int baseid;
+                if (itemid < 30000) {
+                        baseid = (itemid / 1000) * 1000 + (itemid % 100);
+                } else {
+                        baseid = (itemid / 10) * 10;
+                }
+                
+                return itemid != baseid && itemExists(baseid) ? baseid : -1;
+        }
+        
+        private int getEquippedItemid(int itemid) {
+                if (itemid < 30000) {
+                        return getPlayer().getFace();
+                } else {
+                        return getPlayer().getHair();
+                }
+        }
+        
+        public boolean isCosmeticEquipped(int itemid) {
+                return getEquippedItemid(itemid) == itemid;
+        }
+        
         public boolean isUsingOldPqNpcStyle() {
                 return ServerConstants.USE_OLD_GMS_STYLED_PQ_NPCS && this.getPlayer().getParty() != null;
         }
@@ -545,4 +598,495 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
                 return MapleItemInformationProvider.getInstance().getWhoDrops(itemId).toArray();
         }
         
+        public String getSkillBookInfo(int itemid) {
+                SkillBookEntry sbe = MapleSkillbookInformationProvider.getInstance().getSkillbookAvailability(itemid);
+                return sbe != SkillBookEntry.UNAVAILABLE ? "    Obtainable through #rquestline#k." : "";
+        }
+        
+        // By Drago/Dragohe4rt CPQ + WED
+        public int cpqCalcAvgLvl(int map) {
+            int num = 0;
+            int avg = 0;
+            for (MapleMapObject mmo : c.getChannelServer().getMapFactory().getMap(map).getAllPlayer()) {
+                avg += ((MapleCharacter) mmo).getLevel();
+                num++;
+            }
+            avg /= num;
+            return avg;
+        }
+
+        public boolean sendCPQMapLists() {
+            String msg = LanguageConstants.getMessage(getPlayer(), LanguageConstants.CPQPickRoom);
+            int msgLen = msg.length();
+            for (int i = 0; i < 6; i++) {
+                if (fieldTaken(i)) {
+                    if (fieldLobbied(i)) {
+                        msg += "#b#L" + i + "#Carnival Field " + (i + 1) + " (Level: "  // "Carnival field" GMS-like improvement thanks to Jayd
+                                + cpqCalcAvgLvl(980000100 + i * 100) + " / "
+                                + getPlayerCount(980000100 + i * 100) + "x"
+                                + getPlayerCount(980000100 + i * 100) + ")  #l\r\n";
+                    }
+                } else {
+                    if (i >= 0 && i <= 3) {
+                        msg += "#b#L" + i + "#Carnival Field " + (i + 1) + " (2x2) #l\r\n";
+                    } else {
+                        msg += "#b#L" + i + "#Carnival Field " + (i + 1) + " (3x3) #l\r\n";
+                    }
+                }
+            }
+            
+            if (msg.length() > msgLen) {
+                sendSimple(msg);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        public boolean fieldTaken(int field) {
+            if (!c.getChannelServer().canInitMonsterCarnival(true, field)) {
+                return true;
+            }
+            if (!c.getChannelServer().getMapFactory().getMap(980000100 + field * 100).getAllPlayer().isEmpty()) {
+                return true;
+            }
+            if (!c.getChannelServer().getMapFactory().getMap(980000101 + field * 100).getAllPlayer().isEmpty()) {
+                return true;
+            }
+            if (!c.getChannelServer().getMapFactory().getMap(980000102 + field * 100).getAllPlayer().isEmpty()) {
+                return true;
+            }
+            return false;
+        }
+
+        public boolean fieldLobbied(int field) {
+            if (!c.getChannelServer().getMapFactory().getMap(980000100 + field * 100).getAllPlayer().isEmpty()) {
+                return true;
+            }
+            return false;
+        }
+
+        public void cpqLobby(int field) {
+            try {
+                final MapleMap map, mapExit;
+                Channel cs = c.getChannelServer();
+                PlayerStorage ps = cs.getPlayerStorage();
+                
+                map = cs.getMapFactory().getMap(980000100 + 100 * field);
+                mapExit = cs.getMapFactory().getMap(980000000);
+                for (MaplePartyCharacter mpc : c.getPlayer().getParty().getMembers()) {
+                    final MapleCharacter mc;
+                    mc = ps.getCharacterById(mpc.getId());
+                    if (mc != null) {
+                        mc.setChallenged(false);
+                        mc.changeMap(map, map.getPortal(0));
+                        mc.announce(MaplePacketCreator.serverNotice(6, LanguageConstants.getMessage(mc, LanguageConstants.CPQEntryLobby)));
+                        TimerManager tMan = TimerManager.getInstance();
+                        tMan.schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                mapClock(3 * 60);
+                            }
+                        }, 1500);
+                        
+                        mc.setCpqTimer(TimerManager.getInstance().schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                mc.changeMap(mapExit, mapExit.getPortal(0));
+                            }
+                        }, 3 * 60 * 1000));
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        public MapleCharacter getChrById(int id) {
+            return c.getChannelServer().getPlayerStorage().getCharacterById(id);
+        }
+
+        public void cancelCPQLobby() {
+            PlayerStorage ps = c.getChannelServer().getPlayerStorage();
+            for (MaplePartyCharacter mpc : c.getPlayer().getParty().getMembers()) {
+                MapleCharacter mc = ps.getCharacterById(mpc.getId());
+                if (mc != null) {
+                    mc.clearCpqTimer();
+                }
+            }
+        }
+        
+        private void warpoutCPQLobby(MapleMap lobbyMap) {
+            MapleMap out = lobbyMap.getChannelServer().getMapFactory().getMap((lobbyMap.getId() < 980030000) ? 980000000 : 980030000);
+            for (MapleCharacter mc : lobbyMap.getAllPlayers()) {
+                mc.resetCP();
+                mc.setTeam(-1);
+                mc.setMonsterCarnival(null);
+                mc.changeMap(out, out.getPortal(0));
+            }
+        }
+
+        public void startCPQ(final MapleCharacter challenger, final int field) {
+            try {
+                cancelCPQLobby();
+                
+                final MapleMap lobbyMap = getPlayer().getMap();
+                if (challenger != null) {
+                    if (challenger.getParty() == null) {
+                        throw new RuntimeException("Nao existe oponente!");
+                    }
+                    PlayerStorage ps = c.getChannelServer().getPlayerStorage();
+                    for (MaplePartyCharacter mpc : challenger.getParty().getMembers()) {
+                        MapleCharacter mc = ps.getCharacterById(mpc.getId());
+                        if (mc != null) {
+                            mc.changeMap(lobbyMap, lobbyMap.getPortal(0));
+                            TimerManager tMan = TimerManager.getInstance();
+                            tMan.schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mapClock(10);
+                                }
+                            }, 1500);
+                        }
+                    }
+                    for (MaplePartyCharacter mpc : getPlayer().getParty().getMembers()) {
+                        MapleCharacter mc = ps.getCharacterById(mpc.getId());
+                        if (mc != null) {
+                            TimerManager tMan = TimerManager.getInstance();
+                            tMan.schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mapClock(10);
+                                }
+                            }, 1500);
+                        }
+                    }
+                }
+                final int mapid = c.getPlayer().getMapId() + 1;
+                TimerManager tMan = TimerManager.getInstance();
+                tMan.schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            PlayerStorage ps = c.getChannelServer().getPlayerStorage();
+                            for (MaplePartyCharacter mpc : getPlayer().getParty().getMembers()) {
+                                MapleCharacter mc = ps.getCharacterById(mpc.getId());
+                                mc.setMonsterCarnival(null);
+                            }
+                            for (MaplePartyCharacter mpc : challenger.getParty().getMembers()) {
+                                MapleCharacter mc = ps.getCharacterById(mpc.getId());
+                                mc.setMonsterCarnival(null);
+                            }
+                        } catch (NullPointerException npe) {
+                            warpoutCPQLobby(lobbyMap);
+                            return;
+                        }
+                        
+                        new MonsterCarnival(getPlayer().getParty(), challenger.getParty(), mapid, true, (field / 100) % 10);
+                    }
+                }, 11000);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void startCPQ2(final MapleCharacter challenger, final int field) {
+            try {
+                cancelCPQLobby();
+                
+                final MapleMap lobbyMap = getPlayer().getMap();
+                if (challenger != null) {
+                    if (challenger.getParty() == null) {
+                        throw new RuntimeException("Não existe oponente!");
+                    }
+                    PlayerStorage ps = c.getChannelServer().getPlayerStorage();
+                    for (MaplePartyCharacter mpc : challenger.getParty().getMembers()) {
+                        MapleCharacter mc = ps.getCharacterById(mpc.getId());
+                        if (mc != null) {
+                            mc.changeMap(lobbyMap, lobbyMap.getPortal(0));
+                            mapClock(10);
+                        }
+                    }
+                }
+                final int mapid = c.getPlayer().getMapId() + 100;
+                TimerManager tMan = TimerManager.getInstance();
+                tMan.schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            PlayerStorage ps = c.getChannelServer().getPlayerStorage();
+                            for (MaplePartyCharacter mpc : getPlayer().getParty().getMembers()) {
+                                MapleCharacter mc = ps.getCharacterById(mpc.getId());
+                                mc.setMonsterCarnival(null);
+                            }
+                            for (MaplePartyCharacter mpc : challenger.getParty().getMembers()) {
+                                MapleCharacter mc = ps.getCharacterById(mpc.getId());
+                                mc.setMonsterCarnival(null);
+                            }
+                        } catch (NullPointerException npe) {
+                            warpoutCPQLobby(lobbyMap);
+                            return;
+                        }
+                        
+                        new MonsterCarnival(getPlayer().getParty(), challenger.getParty(), mapid, false, (field / 1000) % 10);
+                    }
+                }, 10000);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        public boolean sendCPQMapLists2() {
+            String msg = LanguageConstants.getMessage(getPlayer(), LanguageConstants.CPQPickRoom);
+            int msgLen = msg.length();
+            for (int i = 0; i < 3; i++) {
+                if (fieldTaken2(i)) {
+                    if (fieldLobbied2(i)) {
+                        msg += "#b#L" + i + "#Carnival Field " + (i + 1) + " (Level: "  // "Carnival field" GMS-like improvement thanks to Jayd
+                                + cpqCalcAvgLvl(980031000 + i * 1000) + " / "
+                                + getPlayerCount(980031000 + i * 1000) + "x"
+                                + getPlayerCount(980031000 + i * 1000) + ")  #l\r\n";
+                    }
+                } else {
+                    if (i == 0 || i == 1) {
+                        msg += "#b#L" + i + "#Carnival Field " + (i + 1) + " (2x2) #l\r\n";
+                    } else {
+                        msg += "#b#L" + i + "#Carnival Field " + (i + 1) + " (3x3) #l\r\n";
+                    }
+                }
+            }
+            
+            if (msg.length() > msgLen) {
+                sendSimple(msg);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        public boolean fieldTaken2(int field) {
+            if (!c.getChannelServer().canInitMonsterCarnival(false, field)) {
+                return true;
+            }
+            if (!c.getChannelServer().getMapFactory().getMap(980031000 + field * 1000).getAllPlayer().isEmpty()) {
+                return true;
+            }
+            if (!c.getChannelServer().getMapFactory().getMap(980031100 + field * 1000).getAllPlayer().isEmpty()) {
+                return true;
+            }
+            if (!c.getChannelServer().getMapFactory().getMap(980031200 + field * 1000).getAllPlayer().isEmpty()) {
+                return true;
+            }
+            return false;
+        }
+
+        public boolean fieldLobbied2(int field) {
+            if (!c.getChannelServer().getMapFactory().getMap(980031000 + field * 1000).getAllPlayer().isEmpty()) {
+                return true;
+            }
+            return false;
+        }
+
+        public void cpqLobby2(int field) {
+            try {
+                final MapleMap map, mapExit;
+                Channel cs = c.getChannelServer();
+                PlayerStorage ps = c.getChannelServer().getPlayerStorage();
+                
+                mapExit = cs.getMapFactory().getMap(980030000);
+                map = cs.getMapFactory().getMap(980031000 + 1000 * field);
+                for (MaplePartyCharacter mpc : c.getPlayer().getParty().getMembers()) {
+                    final MapleCharacter mc;
+                    mc = ps.getCharacterById(mpc.getId());
+                    if (mc != null) {
+                        mc.setChallenged(false);
+                        mc.changeMap(map, map.getPortal(0));
+                        mc.announce(MaplePacketCreator.serverNotice(6, LanguageConstants.getMessage(mc, LanguageConstants.CPQEntryLobby)));
+                        TimerManager tMan = TimerManager.getInstance();
+                        tMan.schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                mapClock(3 * 60);
+                            }
+                        }, 1500);
+                        
+                        mc.setCpqTimer(TimerManager.getInstance().schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                mc.changeMap(mapExit, mapExit.getPortal(0));
+                            }
+                        }, 3 * 60 * 1000));
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+        
+        public void mapClock(int time) {
+            getPlayer().getMap().broadcastMessage(MaplePacketCreator.getClock(time));
+        }
+        
+        private boolean sendCPQChallenge(String cpqType, int leaderid) {
+            Set<Integer> cpqLeaders = new HashSet<>();
+            cpqLeaders.add(leaderid);
+            cpqLeaders.add(getPlayer().getId());
+            
+            return c.getWorldServer().getMatchCheckerCoordinator().createMatchConfirmation(MatchCheckerType.CPQ_CHALLENGE, c.getWorld(), getPlayer().getId(), cpqLeaders, cpqType);
+        }
+        
+        public void answerCPQChallenge(boolean accept) {
+            c.getWorldServer().getMatchCheckerCoordinator().answerMatchConfirmation(getPlayer().getId(), accept);
+        }
+        
+        public void challengeParty2(int field) {
+            MapleCharacter leader = null;
+            MapleMap map = c.getChannelServer().getMapFactory().getMap(980031000 + 1000 * field);
+            for (MapleMapObject mmo : map.getAllPlayer()) {
+                MapleCharacter mc = (MapleCharacter) mmo;
+                if (mc.getParty() == null) {
+                    sendOk(LanguageConstants.getMessage(mc, LanguageConstants.CPQFindError));
+                    return;
+                }
+                if (mc.getParty().getLeader().getId() == mc.getId()) {
+                    leader = mc;
+                    break;
+                }
+            }
+            if (leader != null) {
+                if (!leader.isChallenged()) {
+                    if (!sendCPQChallenge("cpq2", leader.getId())) {
+                        sendOk(LanguageConstants.getMessage(leader, LanguageConstants.CPQChallengeRoomAnswer));
+                    }
+                } else {
+                    sendOk(LanguageConstants.getMessage(leader, LanguageConstants.CPQChallengeRoomAnswer));
+                }
+            } else {
+                sendOk(LanguageConstants.getMessage(leader, LanguageConstants.CPQLeaderNotFound));
+            }
+        }
+        
+        public void challengeParty(int field) {
+            MapleCharacter leader = null;
+            MapleMap map = c.getChannelServer().getMapFactory().getMap(980000100 + 100 * field);
+            if (map.getAllPlayer().size() != getPlayer().getParty().getMembers().size()) {
+                sendOk("An unexpected error regarding the other party has occurred.");
+                return;
+            }
+            for (MapleMapObject mmo : map.getAllPlayer()) {
+                MapleCharacter mc = (MapleCharacter) mmo;
+                if (mc.getParty() == null) {
+                    sendOk(LanguageConstants.getMessage(mc, LanguageConstants.CPQFindError));
+                    return;
+                }
+                if (mc.getParty().getLeader().getId() == mc.getId()) {
+                    leader = mc;
+                    break;
+                }
+            }
+            if (leader != null) {
+                if (!leader.isChallenged()) {
+                    if (!sendCPQChallenge("cpq1", leader.getId())) {
+                        sendOk(LanguageConstants.getMessage(leader, LanguageConstants.CPQChallengeRoomAnswer));
+                    }
+                } else {
+                    sendOk(LanguageConstants.getMessage(leader, LanguageConstants.CPQChallengeRoomAnswer));
+                }
+            } else {
+                sendOk(LanguageConstants.getMessage(leader, LanguageConstants.CPQLeaderNotFound));
+            }
+        }
+        
+        private synchronized boolean setupAriantBattle(MapleExpedition exped, int mapid) {
+            MapleMap arenaMap = this.getMap().getChannelServer().getMapFactory().getMap(mapid + 1);
+            if (!arenaMap.getAllPlayers().isEmpty()) {
+                return false;
+            }
+            
+            new AriantColiseum(arenaMap, exped);
+            return true;
+        }
+        
+        public String startAriantBattle(MapleExpeditionType expedType, int mapid) {
+            if (!GameConstants.isAriantColiseumLobby(mapid)) {
+                return "You cannot start an Ariant tournament from outside the Battle Arena Entrance.";
+            }
+            
+            MapleExpedition exped = this.getMap().getChannelServer().getExpedition(expedType);
+            if (exped == null) {
+                return "Please register on an expedition before attempting to start an Ariant tournament.";
+            }
+            
+            List<MapleCharacter> players = exped.getActiveMembers();
+            
+            int playersSize = players.size();
+            if (!(playersSize >= exped.getMinSize() && playersSize <= exped.getMaxSize())) {
+                return "Make sure there are between #r" + exped.getMinSize() + " ~ " + exped.getMaxSize() + " players#k in this room to start the battle.";
+            }
+            
+            MapleMap leaderMap = this.getMap();
+            for (MapleCharacter mc : players) {
+                if (mc.getMap() != leaderMap) {
+                    return "All competing players should be on this area to start the battle.";
+                }
+                
+                if (mc.getParty() != null) {
+                    return "All competing players must not be on a party to start the battle.";
+                }
+                
+                int level = mc.getLevel();
+                if (!(level >= expedType.getMinLevel() && level <= expedType.getMaxLevel())) {
+                    return "There are competing players outside of the acceptable level range in this room. All players must be on #blevel between 20~30#k to start the battle.";
+                }
+            }
+            
+            if (setupAriantBattle(exped, mapid)) {
+                return "";
+            } else {
+                return "Other players are already competing on the Ariant tournament in this room. Please wait a while until the arena becomes available again.";
+            }
+        }
+        
+        public void sendMarriageWishlist(boolean groom) {
+            MapleCharacter player = this.getPlayer();
+            MapleMarriage marriage = player.getMarriageInstance();
+            if(marriage != null) {
+                int cid = marriage.getIntProperty(groom ? "groomId" : "brideId");
+                MapleCharacter chr = marriage.getPlayerById(cid);
+                if (chr != null) {
+                    if (chr.getId() == player.getId()) {
+                        player.announce(Wedding.OnWeddingGiftResult((byte) 0xA, marriage.getWishlistItems(groom), marriage.getGiftItems(player.getClient(), groom)));
+                    } else {
+                        marriage.setIntProperty("wishlistSelection", groom ? 0 : 1);
+                        player.announce(Wedding.OnWeddingGiftResult((byte) 0x09, marriage.getWishlistItems(groom), marriage.getGiftItems(player.getClient(), groom)));
+                    }
+                }
+            }
+        }
+        
+        public void sendMarriageGifts(List<Item> gifts) {
+            this.getPlayer().announce(Wedding.OnWeddingGiftResult((byte) 0xA, Collections.singletonList(""), gifts));
+        }
+
+        public boolean createMarriageWishlist() {
+            MapleMarriage marriage = this.getPlayer().getMarriageInstance();
+            if (marriage != null) {
+                Boolean groom = marriage.isMarriageGroom(this.getPlayer());
+                if (groom != null) {
+                    String wlKey;
+                    if (groom) {
+                        wlKey = "groomWishlist";
+                    } else {
+                        wlKey = "brideWishlist";
+                    }
+                    
+                    if (marriage.getProperty(wlKey).contentEquals("")) {
+                        getClient().announce(Wedding.sendWishList());
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
 }

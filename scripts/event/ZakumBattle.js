@@ -36,7 +36,7 @@ var clearMap = 211042400;
 var minMapId = 280030000;
 var maxMapId = 280030000;
 
-var eventTime = 60;     // 60 minutes
+var eventTime = 120;     // 120 minutes
 
 var lobbyRange = [0, 0];
 
@@ -85,7 +85,9 @@ function setEventRewards(eim) {
         eim.setEventClearStageMeso(mesoStages);
 }
 
-function afterSetup(eim) {}
+function afterSetup(eim) {
+    updateGateState(1);
+}
 
 function setup(channel) {
     var eim = em.newInstance("Zakum" + channel);
@@ -114,7 +116,7 @@ function scheduledTimeout(eim) {
 
 function changedMap(eim, player, mapid) {
     if (mapid < minMapId || mapid > maxMapId) {
-	if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+	if (eim.isExpeditionTeamLackingNow(true, minPlayers, player)) {
             eim.dropMessage(5, "[Expedition] Either the leader has quit the expedition or there is no longer the minimum number of members required to continue it.");
             eim.unregisterPlayer(player);
             end(eim);
@@ -131,7 +133,7 @@ function changedLeader(eim, leader) {}
 function playerDead(eim, player) {}
 
 function playerRevive(eim, player) {
-    if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+    if (eim.isExpeditionTeamLackingNow(true, minPlayers, player)) {
         eim.unregisterPlayer(player);
         eim.dropMessage(5, "[Expedition] Either the leader has quit the expedition or there is no longer the minimum number of members required to continue it.");
         end(eim);
@@ -143,7 +145,7 @@ function playerRevive(eim, player) {
 }
 
 function playerDisconnected(eim, player) {
-    if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+    if (eim.isExpeditionTeamLackingNow(true, minPlayers, player)) {
         eim.dropMessage(5, "[Expedition] Either the leader has quit the expedition or there is no longer the minimum number of members required to continue it.");
         eim.unregisterPlayer(player);
         end(eim);
@@ -188,6 +190,7 @@ function giveRandomEventReward(eim, player) {
 function clearPQ(eim) {
     eim.stopEventTimer();
     eim.setEventCleared();
+    updateGateState(0);
 }
 
 function isZakum(mob) {
@@ -209,4 +212,12 @@ function allMonstersDead(eim) {}
 
 function cancelSchedule() {}
 
-function dispose(eim) {}
+function updateGateState(newState) {    // thanks Conrad for noticing missing gate update
+    em.getChannelServer().getMapFactory().getMap(211042300).getReactorById(2118002).forceHitReactor(newState);
+}
+
+function dispose(eim) {
+    if (!eim.isEventCleared()) {
+        updateGateState(0);
+    }
+}

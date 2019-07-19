@@ -47,6 +47,8 @@ import server.maps.MapMonitor;
 import server.maps.MapleMap;
 import server.maps.MapleReactor;
 import server.maps.ReactorDropEntry;
+import server.partyquest.MapleCarnivalFactory;
+import server.partyquest.MapleCarnivalFactory.MCSkill;
 import tools.MaplePacketCreator;
 
 /**
@@ -184,7 +186,7 @@ public class ReactorActionManager extends AbstractPlayerInteraction {
         return ReactorScriptManager.getInstance().getDrops(reactor.getId());
     }
     
-    private static List<ReactorDropEntry> generateDropList(List<ReactorDropEntry> drops, int dropRate, boolean meso, int mesoChance, int minItems) {
+    private List<ReactorDropEntry> generateDropList(List<ReactorDropEntry> drops, int dropRate, boolean meso, int mesoChance, int minItems) {
         MapleItemInformationProvider ii = MapleItemInformationProvider.getInstance();
         
         List<ReactorDropEntry> items = new ArrayList<>();
@@ -288,6 +290,7 @@ public class ReactorActionManager extends AbstractPlayerInteraction {
 
     public ScheduledFuture<?> schedule(final String methodName, final EventInstanceManager eim, long delay) {
         return TimerManager.getInstance().schedule(new Runnable() {
+            @Override
             public void run() {
                 try {
                     iv.invokeFunction(methodName, eim);
@@ -300,6 +303,7 @@ public class ReactorActionManager extends AbstractPlayerInteraction {
 
     public ScheduledFuture<?> scheduleAtTimestamp(final String methodName, long timestamp) {
         return TimerManager.getInstance().scheduleAtTimestamp(new Runnable() {
+            @Override
             public void run() {
                 try {
                     iv.invokeFunction(methodName, (Object) null);
@@ -308,5 +312,21 @@ public class ReactorActionManager extends AbstractPlayerInteraction {
                 }
             }
         }, timestamp);
+    }
+    
+    public void dispelAllMonsters(int num, int team) { //dispels all mobs, cpq
+        final MCSkill skil = MapleCarnivalFactory.getInstance().getGuardian(num);
+        if (skil != null) {
+            for (MapleMonster mons : getMap().getAllMonsters()) {
+                if(mons.getTeam() == team) {
+                    mons.dispelSkill(skil.getSkill());
+                }
+            }
+        }
+        if (team == 0) {
+            getPlayer().getMap().getRedTeamBuffs().remove(skil);
+        } else {
+            getPlayer().getMap().getBlueTeamBuffs().remove(skil);
+        }
     }
 }

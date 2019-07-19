@@ -80,19 +80,19 @@ public enum AutobanFactory {
 	}
 
 	public void addPoint(AutobanManager ban, String reason) {
-            if(ServerConstants.USE_AUTOBAN == true) {
 		ban.addPoint(this, reason);
-            }
 	}
 	
 	public void alert(MapleCharacter chr, String reason) {
             if(ServerConstants.USE_AUTOBAN == true) {
-		FilePrinter.printError("autobanwarning.txt", (chr != null ? MapleCharacter.makeMapleReadable(chr.getName()) : "") + " caused " + this.name() + " " + reason + "\r\n");
-		if (chr != null && MapleLogger.ignored.contains(chr.getName())){
+		if (chr != null && MapleLogger.ignored.contains(chr.getId())){
 			return;
 		}
 		Server.getInstance().broadcastGMMessage((chr != null ? chr.getWorld() : 0), MaplePacketCreator.sendYellowTip((chr != null ? MapleCharacter.makeMapleReadable(chr.getName()) : "") + " caused " + this.name() + " " + reason));
             }
+        if (ServerConstants.USE_AUTOBAN_LOG) {
+			FilePrinter.print(FilePrinter.AUTOBAN_WARNING, (chr != null ? MapleCharacter.makeMapleReadable(chr.getName()) : "") + " caused " + this.name() + " " + reason);
+		}
 	}
 	
 	public void autoban(MapleCharacter chr, String value) {

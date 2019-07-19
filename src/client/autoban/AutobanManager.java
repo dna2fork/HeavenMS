@@ -6,8 +6,10 @@
 package client.autoban;
 
 import client.MapleCharacter;
+import constants.ServerConstants;
 import java.util.HashMap;
 import java.util.Map;
+import net.server.Server;
 import tools.FilePrinter;
 
 /**
@@ -31,30 +33,34 @@ public class AutobanManager {
     }
 
     public void addPoint(AutobanFactory fac, String reason) {
-    	if (chr.isGM() || chr.isBanned()){
-    		return;
-    	}
-        if (lastTime.containsKey(fac)) {
-            if (lastTime.get(fac) < (System.currentTimeMillis() - fac.getExpire())) {
-                points.put(fac, points.get(fac) / 2); //So the points are not completely gone.
+    	if (ServerConstants.USE_AUTOBAN) {
+            if (chr.isGM() || chr.isBanned()){
+                    return;
+            }
+            
+            if (lastTime.containsKey(fac)) {
+                if (lastTime.get(fac) < (Server.getInstance().getCurrentTime() - fac.getExpire())) {
+                    points.put(fac, points.get(fac) / 2); //So the points are not completely gone.
+                }
+            }
+            if (fac.getExpire() != -1)
+                lastTime.put(fac, Server.getInstance().getCurrentTime());
+
+            if (points.containsKey(fac)) {
+                points.put(fac, points.get(fac) + 1);
+            } else
+                points.put(fac, 1);
+
+            if (points.get(fac) >= fac.getMaximum()) {
+                chr.autoban(reason);
+                //chr.autoban("Autobanned for " + fac.name() + " ;" + reason, 1);
+                //chr.sendPolice("You have been blocked by #bMooplePolice for the HACK reason#k.");
             }
         }
-        if (fac.getExpire() != -1)
-            lastTime.put(fac, System.currentTimeMillis());
-        
-        if (points.containsKey(fac)) {
-            points.put(fac, points.get(fac) + 1);
-        } else
-            points.put(fac, 1);
-
-        if (points.get(fac) >= fac.getMaximum()) {
-        	chr.autoban(reason);
-            //chr.autoban("Autobanned for " + fac.name() + " ;" + reason, 1);
-            //chr.sendPolice("You have been blocked by #bMooplePolice for the HACK reason#k.");
+        if (ServerConstants.USE_AUTOBAN_LOG) {
+            // Lets log every single point too.
+            FilePrinter.print(FilePrinter.AUTOBAN_WARNING, MapleCharacter.makeMapleReadable(chr.getName()) + " caused " + fac.name() + " " + reason);
         }
-        
-        // Lets log every single point too.
-        FilePrinter.printError("autobanwarning.txt", MapleCharacter.makeMapleReadable(chr.getName()) + " caused " + fac.name() + " " + reason + "\r\n");
     }
 
     public void addMiss() {
@@ -76,7 +82,7 @@ public class AutobanManager {
     
     //Don't use the same type for more than 1 thing
     public void spam(int type) {
-        this.spam[type] = System.currentTimeMillis();
+        this.spam[type] = Server.getInstance().getCurrentTime();
     }
     
     public void spam(int type, int timestamp) {
@@ -91,7 +97,6 @@ public class AutobanManager {
      * Timestamp checker
      *
      *  <code>type</code>:<br>
-     * 0: HealOverTime<br>
      * 1: Pet Food<br>
      * 2: InventoryMerge<br>
      * 3: InventorySort<br>
@@ -99,6 +104,8 @@ public class AutobanManager {
      * 5: UseCatchItem<br>
      * 6: Item Drop<br>
      * 7: Chat<br>
+     * 8: HealOverTimeHP<br>
+     * 9: HealOverTimeMP<br>
      *
      * @param type type
      * @return Timestamp checker
@@ -107,11 +114,15 @@ public class AutobanManager {
         if (this.timestamp[type] == time) {  
             this.timestampcounter[type]++;
             if (this.timestampcounter[type] >= times) {
-                chr.getClient().disconnect(false, false);
-                //System.out.println("Same timestamp for type: " + type + "; Character: " + chr);
+                if (ServerConstants.USE_AUTOBAN) {
+                    chr.getClient().disconnect(false, false);
+                }
+                
+                FilePrinter.print(FilePrinter.EXPLOITS, "Player " + chr + " was caught spamming TYPE " + type + " and has been disconnected.");
             }
-            return;
+        } else {
+            this.timestamp[type] = time;
+            this.timestampcounter[type] = 0;
         }
-        this.timestamp[type] = time;
     }
 }

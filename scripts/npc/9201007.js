@@ -23,10 +23,10 @@
 	Assistant Nancy
 -- By ---------------------------------------------------------------------------------------------
 	Angel (get31720 ragezone)
--- Extra Info -------------------------------------------------------------------------------------
-	Fixed by  [happydud3] & [XotiCraze]
--- Content Improved by ----------------------------------------------------------------------------
-        RonanLana (HeavenMS)
+-- Version Info -----------------------------------------------------------------------------------
+	1.0 - First Version by Angel
+        2.0 - Second Version by happydud3 & XotiCraze
+        3.0 - Third Version by RonanLana (HeavenMS)
 ---------------------------------------------------------------------------------------------------
 **/
 
@@ -109,14 +109,23 @@ function action(mode, type, selection) {
             selection = 20; // Random.
         }
     } else if (status == 1) {
+        var cmPartner;
+        try {
+            cmPartner = cm.getMap().getCharacterById(cm.getPlayer().getPartnerId()).getAbstractPlayerInteraction();
+        } catch(err) {
+            cmPartner = null;
+        }
+        
         switch(selection) {
             case 0:
                 if(eim.getIntProperty("isPremium") == 1) {
                     eim.warpEventTeam(680000300);
                     cm.sendOk("Enjoy! Cherish your Photos Forever!");
+                    if (cmPartner != null) cmPartner.npcTalk(cm.getNpc(), "Enjoy! Cherish your Photos Forever!");
                 } else {    // skip the party-time (premium only)
                     eim.warpEventTeam(680000500);
                     cm.sendOk("Congratulations for the newly-wed! I will escort you to the exit.");
+                    if (cmPartner != null) cmPartner.npcTalk(cm.getNpc(), "Congratulations for the newly-wed! I will escort you to the exit.");
                 }
                 
                 cm.dispose();

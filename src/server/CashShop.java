@@ -379,13 +379,16 @@ public class CashShop {
     }
 
     public Item findByCashId(int cashId) {
-        boolean isRing = false;
+        boolean isRing;
         Equip equip = null;
         for (Item item : getInventory()) {
             if (item.getInventoryType().equals(MapleInventoryType.EQUIP)) {
                 equip = (Equip) item;
                 isRing = equip.getRingId() > -1;
+            } else {
+                isRing = false;
             }
+            
             if ((item.getPetId() > -1 ? item.getPetId() : isRing ? equip.getRingId() : item.getCashId()) == cashId) {
                 return item;
             }
@@ -554,7 +557,7 @@ public class CashShop {
         return null;
     }
     
-    public synchronized Item openCashShopSurprise() {
+    public synchronized Pair<Item, Item> openCashShopSurprise() {
         Item css = getCashShopItemByItemid(5222000);
         
         if(css != null) {
@@ -574,12 +577,17 @@ public class CashShop {
                 Item item = cItem.toItem();
                 addToInventory(item);
 
-                return item;
+                return new Pair<>(item, css);
             } else {
                 return null;
             }
         } else {
             return null;
         }
+    }
+    
+    public static Item generateCouponItem(int itemId, short quantity) {
+        CashItem it = new CashItem(77777777, itemId, 7777, ItemConstants.isPet(itemId) ? 30 : 0, quantity, true);
+        return it.toItem();
     }
 }

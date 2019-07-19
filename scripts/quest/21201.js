@@ -20,6 +20,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 importPackage(Packages.client);
+importPackage(Packages.constants);
 
 var status = -1;
 
@@ -58,13 +59,20 @@ function end(mode, type, selection) {
         else if (status == 8) {
             if(!qm.isQuestCompleted(21201)) {
                 if(!qm.canHold(1142130)) {
-                    cm.sendOk("Wow, your #bequip#k inventory is full. I need you to make at least 1 empty slot to complete this quest.");
+                    qm.sendOk("Wow, your #bequip#k inventory is full. I need you to make at least 1 empty slot to complete this quest.");   // thanks MedicOP for finding an issue here
                     qm.dispose();
                     return;
                 }
 
                 qm.gainItem(1142130, true);
                 qm.changeJobById(2110);
+                
+                if (ServerConstants.USE_FULL_ARAN_SKILLSET) {
+                    qm.teachSkill(21100000, 0, 20, -1);   //polearm mastery
+                    qm.teachSkill(21100002, 0, 30, -1);   //final charge
+                    qm.teachSkill(21100004, 0, 20, -1);   //combo smash
+                    qm.teachSkill(21100005, 0, 20, -1);   //combo drain
+                }
 
                 qm.completeQuest();
             }

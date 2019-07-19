@@ -29,19 +29,15 @@ function start() {
 }
 
 function action(mode, type, selection) {
-	if (mode == -1) {
+	if (mode < 1) {  // disposing issue with stylishs found thanks to Vcoc
 		cm.dispose();
 	} else {
-		if (mode == 0 && status == 0) {
-			cm.dispose();
-			return;
-		}
 		if (mode == 1)
 			status++;
 		else
 			status--;
 		if (status == 0) {
-			cm.sendSimple("Oh, hello! Welcome to the Ludibrium Skin-Care! Are you interested in getting tanned and looking sexy? How about a beautiful, snow-white skin? If you have #b#t5153002##k, you can let us take care of the rest and have the kind of skin you've always dreamed of!\r\n#L2#I already have a Coupon!#l");
+			cm.sendSimple("Oh, hello! Welcome to the Ludibrium Skin-Care! Are you interested in getting tanned and looking sexy? How about a beautiful, snow-white skin? If you have #b#t5153002##k, you can let us take care of the rest and have the kind of skin you've always dreamed of!\r\n#L2#Skin Care: #i5153002##t5153002##l");
                 } else if (status == 1) {
 			if (selection == 2) {
 				cm.sendStyle("With our specialized machine, you can see the way you'll look after the treatment PRIOR to the procedure. What kind of a look are you looking for? Go ahead and choose the style of your liking~!", skin);

@@ -28,10 +28,10 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
-import tools.DatabaseConnection;
-import tools.Pair;
 import net.server.audit.locks.MonitoredLockType;
 import net.server.audit.locks.factory.MonitoredReentrantLockFactory;
+import tools.DatabaseConnection;
+import tools.Pair;
 
 /**
  *
@@ -45,11 +45,21 @@ public enum ItemFactory {
     CASH_CYGNUS(4, true),
     CASH_ARAN(5, true),
     MERCHANT(6, false),
-    CASH_OVERALL(7, true);
+    CASH_OVERALL(7, true),
+    MARRIAGE_GIFTS(8, false),
+    DUEY(9, false);
     private final int value;
     private final boolean account;
-    private static final Lock lock = MonitoredReentrantLockFactory.createLock(MonitoredLockType.ITEM, true);
-
+    
+    private static final int lockCount = 400;
+    private static final Lock locks[] = new Lock[lockCount];  // thanks Masterrulax for pointing out a bottleneck issue here
+    
+    static {
+        for (int i = 0; i < lockCount; i++) {
+            locks[i] = MonitoredReentrantLockFactory.createLock(MonitoredLockType.ITEM, true);
+        }
+    }
+    
     private ItemFactory(int value, boolean account) {
         this.value = value;
         this.account = account;
@@ -68,7 +78,9 @@ public enum ItemFactory {
         saveItems(items, null, id, con);
     }
     
-    public synchronized void saveItems(List<Pair<Item, MapleInventoryType>> items, List<Short> bundlesList, int id, Connection con) throws SQLException {
+    public void saveItems(List<Pair<Item, MapleInventoryType>> items, List<Short> bundlesList, int id, Connection con) throws SQLException {
+        // thanks Arufonsu, MedicOP, BHB for pointing a "synchronized" bottleneck here
+        
         if(value != 6) saveItemsCommon(items, id, con);
         else saveItemsMerchant(items, bundlesList, id, con);
     }
@@ -85,7 +97,7 @@ public enum ItemFactory {
         equip.setInt((short) rs.getInt("int"));
         equip.setJump((short) rs.getInt("jump"));
         equip.setVicious((short) rs.getInt("vicious"));
-        equip.setFlag((byte) rs.getInt("flag"));
+        equip.setFlag((short) rs.getInt("flag"));
         equip.setLuk((short) rs.getInt("luk"));
         equip.setMatk((short) rs.getInt("matk"));
         equip.setMdef((short) rs.getInt("mdef"));
@@ -165,7 +177,7 @@ public enum ItemFactory {
                     item.setOwner(rs.getString("owner"));
                     item.setExpiration(rs.getLong("expiration"));
                     item.setGiftFrom(rs.getString("giftFrom"));
-                    item.setFlag((byte) rs.getInt("flag"));
+                    item.setFlag((short) rs.getInt("flag"));
                     items.add(new Pair<>(item, mit));
                 }
             }
@@ -192,6 +204,7 @@ public enum ItemFactory {
         PreparedStatement pse = null;
         ResultSet rs = null;
 
+        Lock lock = locks[id % lockCount];
         lock.lock();
         try {
             StringBuilder query = new StringBuilder();
@@ -320,7 +333,7 @@ public enum ItemFactory {
                         item.setOwner(rs.getString("owner"));
                         item.setExpiration(rs.getLong("expiration"));
                         item.setGiftFrom(rs.getString("giftFrom"));
-                        item.setFlag((byte) rs.getInt("flag"));
+                        item.setFlag((short) rs.getInt("flag"));
                         items.add(new Pair<>(item, mit));
                     }
                 }
@@ -357,6 +370,7 @@ public enum ItemFactory {
         PreparedStatement pse = null;
         ResultSet rs = null;
 
+        Lock lock = locks[id % lockCount];
         lock.lock();
         try {
             ps = con.prepareStatement("DELETE FROM `inventorymerchant` WHERE `characterid` = ?");

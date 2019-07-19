@@ -23,14 +23,16 @@
 */
 package client.command;
 
+import client.command.commands.gm0.*;
+import client.command.commands.gm1.*;
+import client.command.commands.gm2.*;
+import client.command.commands.gm3.*;
+import client.command.commands.gm4.*;
+import client.command.commands.gm5.*;
+import client.command.commands.gm6.*;
+
 import client.MapleClient;
-import client.command.commands.v0.*;
-import client.command.commands.v1.*;
-import client.command.commands.v2.*;
-import client.command.commands.v3.*;
-import client.command.commands.v4.*;
-import client.command.commands.v5.*;
-import client.command.commands.v6.*;
+
 import tools.FilePrinter;
 import tools.Pair;
 
@@ -60,7 +62,7 @@ public class CommandsExecutor {
         return heading == USER_HEADING;
     }
 
-    private HashMap<String, RegisteredCommand> registeredCommands = new HashMap<>();
+    private HashMap<String, Command> registeredCommands = new HashMap<>();
     private Pair<List<String>, List<String>> levelCommandsCursor;
     private List<Pair<List<String>, List<String>>> commandsNameDesc = new ArrayList<>();
 
@@ -79,39 +81,56 @@ public class CommandsExecutor {
     }
     
     public void handle(MapleClient client, String message){
-        final String[] spitedMessage = message.toLowerCase().substring(1).split("[ ]");
-        final String commandName = spitedMessage[0];
-        final RegisteredCommand command = registeredCommands.get(commandName);
+        if (client.tryacquireClient()) {
+            try {
+                handleInternal(client, message);
+            } finally {
+                client.releaseClient();
+            }
+        } else {
+            client.getPlayer().dropMessage(5, "Try again in a while... Latest commands are currently being processed.");
+        }
+    }
+    
+    private void handleInternal(MapleClient client, String message){
+        if (client.getPlayer().getMapId() == 300000012) {
+            client.getPlayer().yellowMessage("You do not have permission to use commands while in jail.");
+            return;
+        }
+        final String splitRegex = "[ ]";
+        String[] splitedMessage = message.substring(1).split(splitRegex, 2);
+        if (splitedMessage.length < 2) {
+            splitedMessage = new String[]{splitedMessage[0], ""};
+        }
+        
+        client.getPlayer().setLastCommandMessage(splitedMessage[1]);    // thanks Tochi & Nulliphite for noticing string messages being marshalled lowercase
+        final String commandName = splitedMessage[0].toLowerCase();
+        final String[] lowercaseParams = splitedMessage[1].toLowerCase().split(splitRegex);
+        
+        final Command command = registeredCommands.get(commandName);
         if (command == null){
             client.getPlayer().yellowMessage("Command '" + commandName + "' is not available. See @commands for a list of available commands.");
             return;
         }
         if (client.getPlayer().gmLevel() < command.getRank()){
-            client.getPlayer().yellowMessage("You not have permission to use this command.");
+            client.getPlayer().yellowMessage("You do not have permission to use this command.");
             return;
         }
         String[] params;
-        if (spitedMessage.length > 1) {
-             params = Arrays.copyOfRange(spitedMessage, 1, spitedMessage.length);
+        if (lowercaseParams.length > 0 && !lowercaseParams[0].isEmpty()) {
+            params = Arrays.copyOfRange(lowercaseParams, 0, lowercaseParams.length);
         } else {
             params = new String[]{};
         }
-        try {
-            Command commandInstance = command.getCommandClass().newInstance();
-            commandInstance.execute(client, params);
-            writeLog(client, message);
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
-
+        
+        command.execute(client, params);
+        writeLog(client, message);
     }
 
     private void writeLog(MapleClient client, String command){
         SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
         FilePrinter.print(FilePrinter.USED_COMMANDS, client.getPlayer().getName() + " used: " + command + " on "
-                + sdf.format(Calendar.getInstance().getTime()) + "\r\n");
+                + sdf.format(Calendar.getInstance().getTime()));
     }
 
     private void addCommandInfo(String name, Class<? extends Command> commandClass) {
@@ -146,11 +165,19 @@ public class CommandsExecutor {
             return;
         }
         
-        RegisteredCommand registeredCommand = new RegisteredCommand(commandClass, rank);
-        
         String commandName = syntax.toLowerCase();
         addCommandInfo(commandName, commandClass);
-        registeredCommands.put(commandName, registeredCommand);
+        
+        try {
+            Command commandInstance = commandClass.newInstance();     // thanks Halcyon for noticing commands getting reinstanced every call
+            commandInstance.setRank(rank);
+            
+            registeredCommands.put(commandName, commandInstance);
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
 
     private void registerLv0Commands(){
@@ -160,16 +187,18 @@ public class CommandsExecutor {
         addCommand("droplimit", DropLimitCommand.class);
         addCommand("time", TimeCommand.class);
         addCommand("credits", StaffCommand.class);
+        addCommand("buyback", BuyBackCommand.class);
         addCommand("uptime", UptimeCommand.class);
         addCommand("gacha", GachaCommand.class);
         addCommand("dispose", DisposeCommand.class);
+        addCommand("changel", ChangeLanguageCommand.class);
         addCommand("equiplv",  EquipLvCommand.class);
         addCommand("showrates", ShowRatesCommand.class);
         addCommand("rates", RatesCommand.class);
         addCommand("online", OnlineCommand.class);
         addCommand("gm", GmCommand.class);
         addCommand("reportbug", ReportBugCommand.class);
-        //addCommand("points", "");
+        addCommand("points", ReadPointsCommand.class);
         addCommand("joinevent", JoinEventCommand.class);
         addCommand("leaveevent", LeaveEventCommand.class);
         addCommand("ranks", RanksCommand.class);
@@ -177,6 +206,11 @@ public class CommandsExecutor {
         addCommand("dex", StatDexCommand.class);
         addCommand("int", StatIntCommand.class);
         addCommand("luk", StatLukCommand.class);
+        addCommand("enableauth", EnableAuthCommand.class);
+        addCommand("toggleexp", ToggleExpCommand.class);
+        addCommand("mylawn", MapOwnerClaimCommand.class);
+        addCommand("bosshp", BossHpCommand.class);
+        addCommand("mobhp", MobHpCommand.class);
         
         commandsNameDesc.add(levelCommandsCursor);
     }
@@ -185,8 +219,6 @@ public class CommandsExecutor {
     private void registerLv1Commands() {
         levelCommandsCursor = new Pair<>((List<String>) new ArrayList<String>(), (List<String>) new ArrayList<String>());
         
-        addCommand("bosshp", 1, BossHpCommand.class);
-        addCommand("mobhp", 1, MobHpCommand.class);
         addCommand("whatdropsfrom", 1, WhatDropsFromCommand.class);
         addCommand("whodrops", 1, WhoDropsCommand.class);
         addCommand("buffme", 1, BuffMeCommand.class);
@@ -212,10 +244,10 @@ public class CommandsExecutor {
         addCommand("dc", 2, DcCommand.class);
         addCommand("cleardrops", 2, ClearDropsCommand.class);
         addCommand("clearslot", 2, ClearSlotCommand.class);
+        addCommand("clearsavelocs", 2, ClearSavedLocationsCommand.class);
         addCommand("warp", 2, WarpCommand.class);
-        addCommand("warpto", 2, WarpToCommand.class);
         addCommand(new String[]{"warphere", "summon"}, 2, SummonCommand.class);
-        addCommand(new String[]{"reach", "follow"}, 2, ReachCommand.class);
+        addCommand(new String[]{"warpto", "reach", "follow"}, 2, ReachCommand.class);
         addCommand("gmshop", 2, GmShopCommand.class);
         addCommand("heal", 2, HealCommand.class);
         addCommand("item", 2, ItemCommand.class);
@@ -226,12 +258,13 @@ public class CommandsExecutor {
         addCommand("maxstat", 2, MaxStatCommand.class);
         addCommand("maxskill", 2, MaxSkillCommand.class);
         addCommand("resetskill", 2, ResetSkillCommand.class);
-        addCommand("mesos", 2, MesosCommand.class);
         addCommand("search", 2, SearchCommand.class);
         addCommand("jail", 2, JailCommand.class);
         addCommand("unjail", 2, UnJailCommand.class);
         addCommand("job", 2, JobCommand.class);
         addCommand("unbug", 2, UnBugCommand.class);
+        addCommand("id", 2, IdCommand.class);
+        addCommand("gachalist", GachaListCommand.class);
         
         commandsNameDesc.add(levelCommandsCursor);
     }
@@ -259,12 +292,12 @@ public class CommandsExecutor {
         addCommand("ignored", 3, IgnoredCommand.class);
         addCommand("pos", 3, PosCommand.class);
         addCommand("togglecoupon", 3, ToggleCouponCommand.class);
-        addCommand("chat", 3, ChatCommand.class);
+        addCommand("togglewhitechat", 3, ChatCommand.class);
         addCommand("fame", 3, FameCommand.class);
         addCommand("givenx", 3, GiveNxCommand.class);
         addCommand("givevp", 3, GiveVpCommand.class);
         addCommand("givems", 3, GiveMesosCommand.class);
-        addCommand("id", 3, IdCommand.class);
+        addCommand("giverp", 3, GiveRpCommand.class);
         addCommand("expeds", 3, ExpedsCommand.class);
         addCommand("kill", 3, KillCommand.class);
         addCommand("seed", 3, SeedCommand.class);
@@ -277,8 +310,9 @@ public class CommandsExecutor {
         addCommand("pe", 3, PeCommand.class);
         addCommand("startevent", 3, StartEventCommand.class);
         addCommand("endevent", 3, EndEventCommand.class);
+        addCommand("startmapevent", 3, StartMapEventCommand.class);
+        addCommand("stopmapevent", 3, StopMapEventCommand.class);
         addCommand("online2", 3, OnlineTwoCommand.class);
-        addCommand("warpsnowball", 3, WarpSnowBallCommand.class);
         addCommand("ban", 3, BanCommand.class);
         addCommand("unban", 3, UnBanCommand.class);
         addCommand("healmap", 3, HealMapCommand.class);
@@ -292,7 +326,12 @@ public class CommandsExecutor {
         addCommand("startquest", 3, QuestStartCommand.class);
         addCommand("completequest", 3, QuestCompleteCommand.class);
         addCommand("resetquest", 3, QuestResetCommand.class);
-        
+        addCommand("timer", 3, TimerCommand.class);
+        addCommand("timermap", 3, TimerMapCommand.class);
+        addCommand("timerall", 3, TimerAllCommand.class);
+        addCommand("warpmap", 3, WarpMapCommand.class);
+        addCommand("warparea", 3, WarpAreaCommand.class);
+
         commandsNameDesc.add(levelCommandsCursor);
     }
 
@@ -305,8 +344,10 @@ public class CommandsExecutor {
         addCommand("exprate", 4, ExpRateCommand.class);
         addCommand("mesorate", 4, MesoRateCommand.class);
         addCommand("droprate", 4, DropRateCommand.class);
+        addCommand("bossdroprate", 4, BossDropRateCommand.class);
         addCommand("questrate", 4, QuestRateCommand.class);
         addCommand("travelrate", 4, TravelRateCommand.class);
+        addCommand("fishrate", 4, FishingRateCommand.class);
         addCommand("itemvac", 4, ItemVacCommand.class);
         addCommand("forcevac", 4, ForceVacCommand.class);
         addCommand("zakum", 4, ZakumCommand.class);
@@ -315,8 +356,12 @@ public class CommandsExecutor {
         addCommand("pap", 4, PapCommand.class);
         addCommand("pianus", 4, PianusCommand.class);
         addCommand("cake", 4, CakeCommand.class);
-        addCommand("playernpcremove", 4, PlayerNpcRemoveCommand.class);
         addCommand("playernpc", 4, PlayerNpcCommand.class);
+        addCommand("playernpcremove", 4, PlayerNpcRemoveCommand.class);
+        addCommand("pnpc", 4, PnpcCommand.class);
+        addCommand("pnpcremove", 4, PnpcRemoveCommand.class);
+        addCommand("pmob", 4, PmobCommand.class);
+        addCommand("pmobremove", 4, PmobRemoveCommand.class);
         
         commandsNameDesc.add(levelCommandsCursor);
     }
@@ -327,6 +372,9 @@ public class CommandsExecutor {
         addCommand("debug", 5, DebugCommand.class);
         addCommand("set", 5, SetCommand.class);
         addCommand("showpackets", 5, ShowPacketsCommand.class);
+        addCommand("showmovelife", 5, ShowMoveLifeCommand.class);
+        addCommand("showsessions", 5, ShowSessionsCommand.class);
+        addCommand("iplist", 5, IpListCommand.class);
         
         commandsNameDesc.add(levelCommandsCursor);
     }
@@ -343,6 +391,7 @@ public class CommandsExecutor {
         addCommand("shutdown", 6, ShutdownCommand.class);
         addCommand("clearquestcache", 6, ClearQuestCacheCommand.class);
         addCommand("clearquest", 6, ClearQuestCommand.class);
+        addCommand("supplyratecoupon", 6, SupplyRateCouponCommand.class);
         addCommand("spawnallpnpcs", 6, SpawnAllPNpcsCommand.class);
         addCommand("eraseallpnpcs", 6, EraseAllPNpcsCommand.class);
         addCommand("addchannel", 6, ServerAddChannelCommand.class);

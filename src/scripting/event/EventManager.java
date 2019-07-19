@@ -21,8 +21,10 @@
 */
 package scripting.event;
 
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
+import jdk.nashorn.api.scripting.ScriptUtils;
+import tools.exceptions.EventInstanceInProgressException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -42,6 +44,7 @@ import net.server.guild.MapleGuild;
 import net.server.world.MapleParty;
 import net.server.world.MaplePartyCharacter;
 import scripting.event.worker.EventScriptScheduler;
+import server.MapleMarriage;
 import server.expeditions.MapleExpedition;
 import server.maps.MapleMap;
 import server.life.MapleMonster;
@@ -60,6 +63,8 @@ import net.server.audit.LockCollector;
 import net.server.audit.locks.MonitoredLockType;
 import net.server.audit.locks.MonitoredReentrantLock;
 import net.server.audit.locks.factory.MonitoredReentrantLockFactory;
+import server.ThreadManager;
+//import jdk.nashorn.api.scripting.ScriptUtils;
 
 /**
  *
@@ -101,6 +106,10 @@ public class EventManager {
         for(int i = 0; i < maxLobbys; i++) this.openedLobbys.add(false);
     }
 
+    private boolean isDisposed() {
+        return onLoadInstances <= -1000;
+    }
+    
     public void cancel() {  // make sure to only call this when there are NO PLAYERS ONLINE to mess around with the event manager!
         ess.dispose();
         
@@ -110,11 +119,14 @@ public class EventManager {
             ex.printStackTrace();
         }
         
+        Collection<EventInstanceManager> eimList;
         synchronized(instances) {
-            for(EventInstanceManager eim : instances.values()) {
-                eim.dispose(true);
-            }
+            eimList = getInstances();
             instances.clear();
+        }
+        
+        for(EventInstanceManager eim : eimList) {
+            eim.dispose(true);
         }
         
         List<EventInstanceManager> readyEims;
@@ -155,20 +167,31 @@ public class EventManager {
         startLock = startLock.dispose();
     }
     
-    private static List<Integer> convertToIntegerArray(List<Double> list) {
+    private List<Integer> convertToIntegerArray(List<Double> list) {
         List<Integer> intList = new ArrayList<>();
         for(Double d: list) intList.add(d.intValue());
 
         return intList;
     }
     
-    public static long getLobbyDelay() {
+    public long getLobbyDelay() {
         return ServerConstants.EVENT_LOBBY_DELAY;
     }
     
     private List<Integer> getLobbyRange() {
         try {
-            return convertToIntegerArray((List<Double>)iv.invokeFunction("setLobbyRange", (Object) null));
+            if (!ServerConstants.JAVA_8) {
+                return convertToIntegerArray((List<Double>)iv.invokeFunction("setLobbyRange", (Object) null));
+            } else {  // java 8 support here thanks to MedicOP
+                ScriptObjectMirror object = (ScriptObjectMirror) iv.invokeFunction("setLobbyRange", (Object) null);
+                int[] to = object.to(int[].class);
+                List<Integer> list = new ArrayList<>();
+                for (int i : to) {
+                    list.add(i);
+                }
+                return list;
+
+            }
         } catch (ScriptException | NoSuchMethodException ex) { // they didn't define a lobby range
             List<Integer> defaultRange = new ArrayList<>();
             defaultRange.add(0);
@@ -233,10 +256,12 @@ public class EventManager {
     }
 
     public Collection<EventInstanceManager> getInstances() {
-        return Collections.unmodifiableCollection(instances.values());
+        synchronized (instances) {
+            return new LinkedList<>(instances.values());
+        }
     }
 
-    public EventInstanceManager newInstance(String name) {
+    public EventInstanceManager newInstance(String name) throws EventInstanceInProgressException {
         EventInstanceManager ret = getReadyInstance();
         
         if(ret == null) {
@@ -245,7 +270,26 @@ public class EventManager {
             ret.setName(name);
         }
         
-        instances.put(name, ret);
+        synchronized (instances) {
+            if (instances.containsKey(name)) {
+                throw new EventInstanceInProgressException(name, this.getName());
+            }
+            
+            instances.put(name, ret);
+        }
+        return ret;
+    }
+    
+    public MapleMarriage newMarriage(String name) throws EventInstanceInProgressException {
+        MapleMarriage ret = new MapleMarriage(this, name);
+        
+        synchronized (instances) {
+            if (instances.containsKey(name)) {
+                throw new EventInstanceInProgressException(name, this.getName());
+            }
+            
+            instances.put(name, ret);
+        }
         return ret;
     }
 
@@ -254,7 +298,10 @@ public class EventManager {
             @Override
             public void run() {
                 freeLobbyInstance(name);
-                instances.remove(name);
+                
+                synchronized (instances) {
+                    instances.remove(name);
+                }
             }
         }, ServerConstants.EVENT_LOBBY_DELAY * 1000);
     }
@@ -332,6 +379,34 @@ public class EventManager {
             return -1;
     }
     
+    private String getInternalScriptExceptionMessage(Throwable a) {
+        if (!(a instanceof ScriptException)) {
+            return null;
+        }
+        
+        while(true) {
+            Throwable t = a;
+            a = a.getCause();
+            
+            if (a == null) {
+                return t.getMessage();
+            }
+        }
+    }
+    
+    private EventInstanceManager createInstance(String name, Object... args) throws ScriptException, NoSuchMethodException {
+        return (EventInstanceManager) iv.invokeFunction(name, args);
+    }
+    
+    private void registerEventInstance(String eventName, int lobbyId) {
+        Integer oldLobby = instanceLocks.get(eventName);
+        if (oldLobby != null) {
+            setLockLobby(oldLobby, false);
+        }
+        
+        instanceLocks.put(eventName, lobbyId);
+    }
+    
     public boolean startInstance(MapleExpedition exped) {
         return startInstance(-1, exped);
     }
@@ -342,6 +417,8 @@ public class EventManager {
 
     //Expedition method: starts an expedition
     public boolean startInstance(int lobbyId, MapleExpedition exped, MapleCharacter leader) {
+        if (this.isDisposed()) return false;
+        
         try {
             if(!playerPermit.contains(leader.getId()) && startSemaphore.tryAcquire(7777, TimeUnit.MILLISECONDS)) {
                 playerPermit.add(leader.getId());
@@ -357,14 +434,22 @@ public class EventManager {
                             if(!startLobbyInstance(lobbyId)) return false;
                         }
                         
-                        EventInstanceManager eim = (EventInstanceManager) (iv.invokeFunction("setup", leader.getClient().getChannel()));
-                        if(eim == null) {
+                        EventInstanceManager eim;
+                        try {
+                            eim = createInstance("setup", leader.getClient().getChannel());
+                            registerEventInstance(eim.getName(), lobbyId);
+                        } catch (ScriptException | NullPointerException e) {
+                            String message = getInternalScriptExceptionMessage(e);
+                            if (message != null && !message.startsWith(EventInstanceInProgressException.EIIP_KEY)) {
+                                throw e;
+                            }
+                            
                             if(lobbyId > -1) {
                                 setLockLobby(lobbyId, false);
                             }
                             return false;
                         }
-                        instanceLocks.put(eim.getName(), lobbyId);
+                        
                         eim.setLeader(leader);
 
                         exped.start();
@@ -399,6 +484,8 @@ public class EventManager {
     }
     
     public boolean startInstance(int lobbyId, MapleCharacter chr, MapleCharacter leader, int difficulty) {
+        if (this.isDisposed()) return false;
+        
         try {
             if(!playerPermit.contains(leader.getId()) && startSemaphore.tryAcquire(7777, TimeUnit.MILLISECONDS)) {
                 playerPermit.add(leader.getId());
@@ -418,14 +505,21 @@ public class EventManager {
                             }
                         }
                         
-                        EventInstanceManager eim = (EventInstanceManager) (iv.invokeFunction("setup", difficulty, (lobbyId > -1) ? lobbyId : leader.getId()));
-                        if(eim == null) {
+                        EventInstanceManager eim;
+                        try {
+                            eim = createInstance("setup", difficulty, (lobbyId > -1) ? lobbyId : leader.getId());
+                            registerEventInstance(eim.getName(), lobbyId);
+                        } catch (ScriptException | NullPointerException e) {
+                            String message = getInternalScriptExceptionMessage(e);
+                            if (message != null && !message.startsWith(EventInstanceInProgressException.EIIP_KEY)) {
+                                throw e;
+                            }
+                            
                             if(lobbyId > -1) {
                                 setLockLobby(lobbyId, false);
                             }
                             return false;
                         }
-                        instanceLocks.put(eim.getName(), lobbyId);
                         eim.setLeader(leader);
 
                         if(chr != null) eim.registerPlayer(chr);
@@ -459,6 +553,8 @@ public class EventManager {
     }
     
     public boolean startInstance(int lobbyId, MapleParty party, MapleMap map, MapleCharacter leader) {
+        if (this.isDisposed()) return false;
+        
         try {
             if(!playerPermit.contains(leader.getId()) && startSemaphore.tryAcquire(7777, TimeUnit.MILLISECONDS)) {
                 playerPermit.add(leader.getId());
@@ -474,14 +570,22 @@ public class EventManager {
                             if(!startLobbyInstance(lobbyId)) return false;
                         }
                         
-                        EventInstanceManager eim = (EventInstanceManager) (iv.invokeFunction("setup", (Object) null));
-                        if(eim == null) {
+                        EventInstanceManager eim;
+                        try {
+                            eim = createInstance("setup", (Object) null);
+                            registerEventInstance(eim.getName(), lobbyId);
+                        } catch (ScriptException | NullPointerException e) {
+                            String message = getInternalScriptExceptionMessage(e);
+                            if (message != null && !message.startsWith(EventInstanceInProgressException.EIIP_KEY)) {
+                                throw e;
+                            }
+                            
                             if(lobbyId > -1) {
                                 setLockLobby(lobbyId, false);
                             }
                             return false;
                         }
-                        instanceLocks.put(eim.getName(), lobbyId);
+                        
                         eim.setLeader(leader);
 
                         eim.registerParty(party, map);
@@ -516,6 +620,8 @@ public class EventManager {
     }
     
     public boolean startInstance(int lobbyId, MapleParty party, MapleMap map, int difficulty, MapleCharacter leader) {
+        if (this.isDisposed()) return false;
+        
         try {
             if(!playerPermit.contains(leader.getId()) && startSemaphore.tryAcquire(7777, TimeUnit.MILLISECONDS)) {
                 playerPermit.add(leader.getId());
@@ -531,14 +637,22 @@ public class EventManager {
                             if(!startLobbyInstance(lobbyId)) return false;
                         }
                         
-                        EventInstanceManager eim = (EventInstanceManager) (iv.invokeFunction("setup", difficulty, (lobbyId > -1) ? lobbyId : party.getLeaderId()));
-                        if(eim == null) {
+                        EventInstanceManager eim;
+                        try {
+                            eim = createInstance("setup", difficulty, (lobbyId > -1) ? lobbyId : party.getLeaderId());
+                            registerEventInstance(eim.getName(), lobbyId);
+                        } catch (ScriptException | NullPointerException e) {
+                            String message = getInternalScriptExceptionMessage(e);
+                            if (message != null && !message.startsWith(EventInstanceInProgressException.EIIP_KEY)) {
+                                throw e;
+                            }
+                            
                             if(lobbyId > -1) {
                                 setLockLobby(lobbyId, false);
                             }
                             return false;
                         }
-                        instanceLocks.put(eim.getName(), lobbyId);
+                        
                         eim.setLeader(leader);
 
                         eim.registerParty(party, map);
@@ -577,6 +691,8 @@ public class EventManager {
     }
     
     public boolean startInstance(int lobbyId, EventInstanceManager eim, String ldr, MapleCharacter leader) {
+        if (this.isDisposed()) return false;
+        
         try {
             if(!playerPermit.contains(leader.getId()) && startSemaphore.tryAcquire(7777, TimeUnit.MILLISECONDS)) {
                 playerPermit.add(leader.getId());
@@ -598,7 +714,7 @@ public class EventManager {
                             }
                             return false;
                         }
-                        instanceLocks.put(eim.getName(), lobbyId);
+                        registerEventInstance(eim.getName(), lobbyId);
                         eim.setLeader(leader);
                         
                         iv.invokeFunction("setup", eim);
@@ -631,7 +747,14 @@ public class EventManager {
             Object p = iv.invokeFunction("getEligibleParty", party.getPartyMembers());
             
             if(p != null) {
-                List<MaplePartyCharacter> lmpc = new ArrayList<>((List<MaplePartyCharacter>) p);
+                List<MaplePartyCharacter> lmpc;
+                
+                if(ServerConstants.JAVA_8) {
+                    lmpc = new ArrayList<>(((Map<String, MaplePartyCharacter>)(ScriptUtils.convert(p, Map.class))).values());
+                } else {
+                    lmpc = new ArrayList<>((List<MaplePartyCharacter>) p);
+                }
+
                 party.setEligibleMembers(lmpc);
                 return lmpc;
             }
@@ -786,8 +909,7 @@ public class EventManager {
     }
     
     private void fillEimQueue() {
-        Thread t = new Thread(new EventManagerWorker());  //call new thread to fill up readied instances queue
-        t.start();
+        ThreadManager.getInstance().newTask(new EventManagerWorker());  //call new thread to fill up readied instances queue
     }
     
     private EventInstanceManager getReadyInstance() {
@@ -811,7 +933,7 @@ public class EventManager {
         int nextEventId;
         queueLock.lock();
         try {
-            if(onLoadInstances <= -1000 || readyInstances.size() + onLoadInstances >= Math.ceil((double)maxLobbys / 3.0)) return;
+            if (this.isDisposed() || readyInstances.size() + onLoadInstances >= Math.ceil((double)maxLobbys / 3.0)) return;
             
             onLoadInstances++;
             nextEventId = readyId;
@@ -823,7 +945,7 @@ public class EventManager {
         EventInstanceManager eim = new EventInstanceManager(this, "sampleName" + nextEventId);
         queueLock.lock();
         try {
-            if(onLoadInstances <= -1000) {  // EM already disposed
+            if (this.isDisposed()) {  // EM already disposed
                 return;
             }
             

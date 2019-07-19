@@ -1,15 +1,16 @@
-# HeavenMS
----
+﻿<img src="https://heavenmssurveyhome.files.wordpress.com/2018/12/heavenmslogo.png"  width="370" height="auto">
 
 ## Head developer: Ronan C. P. Lana
 
-Besides myself for maintaining this repository, credits are to be given to Nexon(Duh!), the original MapleSolaxia staff and other colaborators, as just some changes/patches on the game were applied by myself, in which some of them diverged from the original v83 patch contents (alright, not just "some patches" by now since a whole lot of major server core changes have been applied on this development).
+Besides myself for maintaining this repository, credits are to be given to Wizet/Nexon (owners of MapleStory & it's IP contents), the original MapleSolaxia staff and other colaborators, as just some changes/patches on the game were applied by myself, in which some of them diverged from the original v83 patch contents (alright, not just "some patches" by now since a whole lot of major server core changes have been applied on this development).
 
 Regarding distributability and usage of the code presented here: like it was before, this MapleStory server is open-source. By that, it is meant that anyone is **free to install, use, modify and redistribute the contents**, as long as there is **no kind of commercial trading involved** and the **credits to the original creators are maintained** within the codes.
 
-This is a NetBeans 8.0.2 Project, that MUST be built and run under JDK/JRE 7 in order to run properly. This means that it's easier to install the project via opening the server project folder inside NetBeans' IDE. Once installed, build this project on your machine and run the server using the "launch.bat" application.
+This is a NetBeans 8.2 Project, that should be built and run on Java 8 in order to run properly (used to be ran in Java 7, thanks @kolakcc for the Java 8 support!).
 
-In this project, many gameplay-wise issues generated from either the original WZ files and the server source have been partially or completely solved. Considering the use of the provided edited WZ's and server-side wz.xml files should be of the greatest importance when dealing with this instance of server source, in order to perceive it at it's full potential. My opinion, though! Refer to "README_wzchanges.txt" for more information on what has been changed from Nexon's v83 WZ files.
+Being a NetBeans 8.2 Project, this means that it's easier to install the project via opening the server project folder inside NetBeans' IDE. Once installed, build this project on your machine and run the server using the "launch.bat" application.
+
+In this project, many gameplay-wise issues generated from either the original WZ files and the server source have been partially or completely solved. Considering the use of the provided edited WZ's and server-side wz.xml files should be of the greatest importance when dealing with this instance of server source, in order to perceive it at it's full potential. My opinion, though!
 
 The main objective of this project is to try as best as possible to recreate what once was the original MapleStory v83, while adding up some flavors that spices up the gameplay. In other words, aim to get the best of the MapleStory of that era.
 
@@ -20,13 +21,21 @@ Server files: https://github.com/ronancpl/HeavenMS
 
 Client files & general tools: https://drive.google.com/drive/folders/0BzDsHSr-0V4MYVJ0TWIxd05hYUk
 
+Java 8 SDK & NetBeans bundle: https://www.oracle.com/technetwork/pt/java/javase/downloads/jdk-netbeans-jsp-3413153-ptb.html
+
 **Important note about localhosts**: these executables are red-flagged by antivirus tools as __potentially malicious softwares__, this happens due to the reverse engineering methods that were applied onto these software artifacts. Those depicted here have been put to use for years already and posed no harm so far, so they are soundly assumed to be safe.
 
-Recommended localhost: https://hostr.co/m2bVtnizCtmD
+  Latest localhost: https://hostr.co/SvnSKrGzXhG0
+
+  The following list, in bottom-up chronological order, holds information regarding all changes that were applied from the starting localhost used in this development. Some lines have a link attached, that will lead you to a snapshot of the localhost at that version of the artifact. Naturally, later versions holds all previous changes along with the proposed changes.
 
 **Change log:**
 
-  * Removed block on applying attack-based strengthening gems on non-weapon equipments.
+  * Fixed Monster Magnet crashing the caster when trying to pull bosses.
+
+  * Fixed some 'rn' problems with quest icons & removed "tab" from party leader changed message. https://hostr.co/tsYsQzzV6xT0
+
+  * Removed block on applying attack-based strengthening gems on non-weapon equipments. https://hostr.co/m2bVtnizCtmD
 
   * Set a higher cap for SPEED.
 
@@ -46,22 +55,56 @@ Recommended localhost: https://hostr.co/m2bVtnizCtmD
 
   * Fraysa's https://hostr.co/gJbLZITRVHmv
 
-  * MapleSilver's starting on window-mode.
+  * Eric's MapleSilver starting on window-mode.
 
 ---
-### Development status
+### Open-source client development - HeavenClient
+
+Continuing from where **SYJourney**'s JourneyClient has finished contributions (as of 5 Jul 2016), an open-source development of a software artifact designed to handle both gaming operations and interactions with the server is being conducted.
+
+Newer implementations are being maintained by **頼晏 (ryantpayton)** and aims to offer higher display resolution, bring recent UI contents for the pre-BB gameplay and incremental support on overall gaming perspective.
+
+HeavenClient Github: https://github.com/ryantpayton/HeavenClient
+
+---
+### Development information
 
 Status: <span style="color:grey">__In development (4th round)__</span>.
 
-HeavenMS development achieved an acceptable state-of-the-art and will get into a halt. A heartfelt thanks for everyone that contributed in some way for the progress of this server!
+#### Mission
 
-Although development is halted, support for fixing features that were implemented here is still up. You can still actively help us improve the server by issuing pull requests with informative details about what's changing.
+With non-profitting means intended, provide nostalgic pre-BB maplers world-wide a quality local server for freestyle entertainment.
+
+#### Vision
+
+By taking the v83 MapleStory as the angular stone, incrementally look forward to improve the gaming experience whilst still retaining the "clean v83" conservative ideal. Also, through reviewing distinguished aspects of the server's behavior that could be classified as a potential server threat, in the long run look for ways to improve or even stabilize some of it's uncertain aspects.
+
+#### Values
+
+* Autonomy, seek self-improvement for tackling issues head-on;
+* Adventurous, take no fear of failures on the path of progress;
+* Light-hearted support, general people out there didn't experience what you've already had;
+* Humility, no matter how good you are, there's no good in boasting yourself over experiences only a few have had;
+
+#### Announcements
+
+HeavenMS development as we can see right now achieved an acceptable state-of-the-art. A heartfelt thanks for everyone that contributed in some way for the progress of this server!
+
+As development and support for fixing features that were implemented here is still up, with **your** help we can improve it even further! Please help where you can to better the server for everyone.
+
+Furthermore, you can actively help improving the server by issuing pull requests with informative details about what's changing.
+
+Note for anyone up to contribute further pull requests: make awareness to use __english language__ in codes and messages, as usage of any other languages will render it open to faculty of whether this content will be ready to be accepted or *further changes are going to be requested* before it becomes apt to merge.
+
+#### Support HeavenMS
 
 If you liked this project, please don't forget to __star__ the repo ;) .
 
 It's never enough to tell this, thanks to everyone that have been contributing something for the continuous improvement of the server! Be it through bug reports, donation, code snippets and/or pull requests.
 
 Our Discord channel is still available on: https://discord.gg/Q7wKxHX
+
+<hr id="donate" />
 
 ### Donation
 
@@ -71,9 +114,11 @@ Paypal: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=3K8
 
 ### Disclaimer
 
+* HeavenMS development is decisively __ONLY accepting donations__ from the Paypal link aforementioned, in the __ronancpl/HeavenMS__ repository readme (no patreons or other revenue resources).
+
 * HeavenMS staff has __no current intention__ to publicly open a server with this source, if that ever comes to happen this note will be lifted. __Don't be scammed!__
 
-* This server source is __NOT intended to be stable__ as is. Proper deadlock review and other maintenance checks are needed in order to make it suitable for production use.
+* This server source is __NOT intended to be stable__ as is. Proper deadlock review and other maintenance contributions are needed in order to make it steps ahead on viability.
 
 ---
 ### Preparing the ambient 
@@ -88,18 +133,14 @@ Firstly, install all the general tools required to run the server:
 * mysql-query-browser.msi -> MySQL client component, visually shows the DB data and hubs queries.
 * hamachi.msi -> used for establishing a tunnelling route for the server/client communication.
 
-
-Now install the Java 7 Development Kit:
-
-* jdk-7u79-windows-x64.exe
-* netbeans-8.0.2-javase-windows.exe -> It's a NetBeans project, use other IDE at your own risk.
+Now install the Java 8 SDK & NetBeans bundle:
+* jdk-8u111-nb-8_2-windows-x64.exe -> It's a NetBeans project, use other IDE at your own risk.
 
 Now that the tools have been installed, test if they are working.
 
 For WampServer:
 
-* Once you're done installing it, run it and you will see the Wamp icon on the bottom right corner.
-Left click it and click 'Put Online'.
+* Once you're done installing it, run it and you will see the Wamp icon on the bottom right corner. Left click it and click 'Put Online'.
 * In case of ORANGE ICON, change port 80 at "httpd.conf" to another, as it clashes with a Windows default port. Then Left click it again and click 'Start All Services'.
 * The Wamp icon must look completely green (if its orange or red, you have a problem).
 
@@ -112,11 +153,15 @@ Hamachi is optional, though. You don't have to install Hamachi if you want to ma
 ---
 ### Installing the SERVER 
 
-Set the "HeavenMS" folder on a place of your preference. It is recommended to use "C:\Nexon\HeavenMS".
+By downloading through the Github download button, you may have obtained a ZIP file with a single "HeavenMS-master" folder on it. EXTRACT that folder.
+
+For expediency, "HeavenMS-master" folder on this guide will be referred just as "HeavenMS". Rename it for convenience. Then, set "HeavenMS" the folder on a place of your preference. It is recommended to use "C:\Nexon\HeavenMS".
 
 Setting up the SQL: open MySQL Query Browser, then create a new session with the parameters below, then click OK.
 
-Server Host: localhost		Port: 3306		Username: root
+* Server Host: localhost
+* Port: 3306
+* Username: root
 
 Now it must be done CAREFULLY:
 
@@ -132,15 +177,15 @@ At the end of the execution of these SQLs, you should have installed a database 
 
 Configure the IP you want to use for your MapleStory server in "configuration.ini" file, or set it as "localhost" if you want to run it only on your machine. Alternatively, you can use the IP given by Hamachi to use on a Hamachi network, or you can use a non-Hamachi method of port-forwarding. Neither will be approached here.
 
+#### Open the NetBeans project
+
 Now open NetBeans, and click "Open a project..." . Select then the "HeavenMS" folder, that should already be a project recognizable by NetBeans. If it isn't, you have a problem.
 
-#### Inside the project, you may encounter some code errors.
+Inside the project, you may encounter some code errors.
 
-These errors pops-up because you have not set yet the "cores" of the project. From the project hierarchy, right-click the project and select "Resolve Project Problems".
+If that's the case, you have yet to set the core JARs of the project. From the project hierarchy, right-click the project and select "Resolve Project Problems".
 
-Locate the "cores" folder inside the root directory of this project and manually configure the missing files with the files that are there.
-
-Also, a new Java7 platform must be defined to run the server. Click "Manage Platforms...", then "Add platform", browse through until you locate the Java7 folder in the file system, it should be at "C:\Program Files\Java". Then, name this new platform "JDK 1.7".
+Locate the folder "cores" inside the root directory of this project and manually configure the missing files on NetBeans (mina-core, slf4j-api, ...).
 
 Finally, select "Clean and Build project" to build the JAR file for the MapleStory server. Once done, make sure both WampServer and Hamachi are on and functional, then execute "launch.bat" on the root of the project. If no errors were raised from this action, your MapleStory server is now online.
 
@@ -152,7 +197,7 @@ Finally, select "Clean and Build project" to build the JAR file for the MapleSto
 The client's set-up is quite straightforward:
 
 1. From "ManagerMsv83.exe", install MapleStory on your folder of preference (e.g. "C:\Nexon\MapleStory") and follow their instructions.
-2. Once done, erase these files: "HShield" (folder), "ASPLauncher.exe", "MapleStory.exe" and "patcher.exe".
+2. Once done, erase these files: "HShield" (folder), "ASPLnchr.exe", "MapleStory.exe" and "Patcher.exe".
 3. Extract into the client folder the "localhost.exe" from the provided link.
 4. Overwrite the original WZ files with the ones provided from either one of those folders on the Google Drive:
 	- "commit???_wz" (last published RELEASE, referring to commit of same number).
@@ -160,7 +205,7 @@ The client's set-up is quite straightforward:
 
 #### Editing localhost IP target
 
-If you are not using "localhost" as the target IP on the server's config file, you will need to HEX-EDIT "localhost.exe" to fetch your IP. Track down all IP locations by searching for "Text String" "127.0.0.1", and applying the changes wherever it fits.
+If you are not using "localhost" as the target IP on the server's config file, you will need to HEX-EDIT "localhost.exe" to fetch your IP. Track down all IP locations by searching for "Type: String" "127.0.0.1", and applying the changes wherever it fits.
 
 To hex-edit, install the Neo Hex Editor from "free-hex-editor-neo.exe" and follow their instructions. Once done, open "localhost.exe" for editing and overwrite the IP values under the 3 addresses. Save the changes and exit the editor.
 
@@ -180,9 +225,27 @@ In that case, extract "lolwut.exe" from "lolwut-v0.01.rar" and place it on the M
 Important: should the client be refused a connection to the game server, it may be because of firewall issues. Head to the end of this file to proceed in allowing this connection through the computer's firewall. Alternatively, one can deactivate the firewall and try opening the client again.
 
 ---
+### Creating an account and logging in the game
+
+By default, the server source is set to allow AUTO-REGISTERING. This means that, by simply typing in a "Login ID" and a "Password", you're able to create a new account.
+
+After creating a character, experiment typing in all-chat "@commands". This will display all available commands for the current GM level your character has.
+
+To change a character's GM level, make sure that character is not logged in, then:
+
+* Open MySQL Query Browser;
+* Double-click "heavenms" schema;
+* Double click "characters" table;
+* Execute the selected query;
+* Mark "Edit" flag on the MySQL Query Browser UI screen;
+* Locate your character's row on the displayed ResultSet;
+* Edit your character's GM level;
+* Hit APPLY CHANGES.
+
+---
 ### Some notes about WZ/WZ.XML EDITING 
 
-NOTE: Be extremely wary when using server-side's XMLs data being reimporting into the client's WZ, as some means of synchronization between the server and client modules, this action COULD generate some kind of bugs afterwards. Client-to-server data reimporting seems to be fine, though.
+NOTE: Be extremely wary when using server-side's XMLs data being reimported into the client's WZ, as some means of synchronization between the server and client modules, this action COULD generate some kind of bugs afterwards. Client-to-server data reimporting seems to be fine, though.
 
 #### Editing the v83 WZ's:
 

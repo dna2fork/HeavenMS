@@ -21,9 +21,6 @@
  */
 package scripting.event;
 
-import java.io.File;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import tools.Pair;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -42,23 +39,20 @@ import net.server.audit.locks.MonitoredReentrantReadWriteLock;
 import net.server.audit.locks.factory.MonitoredReentrantLockFactory;
 import net.server.world.MapleParty;
 import net.server.world.MaplePartyCharacter;
-import provider.MapleDataProviderFactory;
 import server.MaplePortal;
 import server.TimerManager;
 import server.MapleStatEffect;
 import server.expeditions.MapleExpedition;
 import server.life.MapleMonster;
 import server.maps.MapleMap;
-import server.maps.MapleMapFactory;
+import server.maps.MapleMapManager;
 import server.maps.MapleReactor;
-import tools.DatabaseConnection;
 import client.MapleCharacter;
 import client.SkillFactory;
 import client.Skill;
 import constants.ItemConstants;
 import constants.ServerConstants;
 import java.awt.Point;
-import java.sql.Connection;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -67,7 +61,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.server.coordinator.MapleEventRecallCoordinator;
 import scripting.AbstractPlayerInteraction;
+import scripting.event.worker.EventScriptScheduler;
 import server.MapleItemInformationProvider;
+import server.ThreadManager;
 import server.life.MapleLifeFactory;
 import server.life.MapleNPC;
 import tools.MaplePacketCreator;
@@ -83,9 +79,11 @@ public class EventInstanceManager {
 	private List<MapleMonster> mobs = new LinkedList<>();
 	private Map<MapleCharacter, Integer> killCount = new HashMap<>();
 	private EventManager em;
-	private MapleMapFactory mapFactory;
+        private EventScriptScheduler ess;
+	private MapleMapManager mapManager;
 	private String name;
 	private Properties props = new Properties();
+        private Map<String, Object> objectProps = new HashMap<>();
 	private long timeStarted = 0;
 	private long eventTime = 0;
 	private MapleExpedition expedition = null;
@@ -124,8 +122,8 @@ public class EventInstanceManager {
 	public EventInstanceManager(EventManager em, String name) {
 		this.em = em;
 		this.name = name;
-		mapFactory = new MapleMapFactory(this, MapleDataProviderFactory.getDataProvider(new File(System.getProperty("wzpath") + "/Map.wz")), MapleDataProviderFactory.getDataProvider(new File(System.getProperty("wzpath") + "/String.wz")), (byte) 0, (byte) 1);//Fk this
-		mapFactory.setChannel(em.getChannelServer().getId());
+                this.ess = new EventScriptScheduler();
+		this.mapManager = new MapleMapManager(this, em.getWorldServer().getId(), em.getChannelServer().getId());
 	}
         
         public void setName(String name) {
@@ -224,52 +222,57 @@ public class EventInstanceManager {
                 }
                 
 	}
+        
+        public Object invokeScriptFunction(String name, Object... args) throws ScriptException, NoSuchMethodException {
+                if (!disposed) {
+                        return em.getIv().invokeFunction(name, args);
+                } else {
+                        return null;
+                }
+        }
 
-	public synchronized void registerPlayer(MapleCharacter chr) {
+        public synchronized void registerPlayer(final MapleCharacter chr) {
+                registerPlayer(chr, true);
+        }
+        
+	public synchronized void registerPlayer(final MapleCharacter chr, boolean runEntryScript) {
 		if (chr == null || !chr.isLoggedinWorld() || disposed) {
 			return;
 		}
                 
+                wL.lock();
                 try {
-                        wL.lock();
-                        try {
-                                if(chars.containsKey(chr.getId())) {
-                                        return;
-                                }
-                                
-                                chars.put(chr.getId(), chr);
-                                chr.setEventInstance(this);
-                        } finally {
-                                wL.unlock();
+                        if(chars.containsKey(chr.getId())) {
+                                return;
                         }
-                        
-                        sL.lock();
+
+                        chars.put(chr.getId(), chr);
+                        chr.setEventInstance(this);
+                } finally {
+                        wL.unlock();
+                }
+                
+                if (runEntryScript) {
                         try {
-                                em.getIv().invokeFunction("playerEntry", this, chr);
-                        } finally {
-                                sL.unlock();
+                                invokeScriptFunction("playerEntry", EventInstanceManager.this, chr);
+                        } catch (ScriptException | NoSuchMethodException ex) {
+                                ex.printStackTrace();
                         }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+                }
 	}  
         
-        public void exitPlayer(MapleCharacter chr) {
+        public void exitPlayer(final MapleCharacter chr) {
 		if (chr == null || !chr.isLoggedin()){
 			return;
 		}
-		try {
-			unregisterPlayer(chr);
-                        
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("playerExit", this, chr);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+		
+                unregisterPlayer(chr);
+                
+                try {
+                        invokeScriptFunction("playerExit", EventInstanceManager.this, chr);
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
 	}
         
         public void dropMessage(int type, String message) {
@@ -294,15 +297,10 @@ public class EventInstanceManager {
                 event_schedule = TimerManager.getInstance().schedule(new Runnable() {
                         @Override
                         public void run() {
+                                dismissEventTimer();
+                                
                                 try {
-                                        dismissEventTimer();
-                                        
-                                        sL.lock();
-                                        try {
-                                                em.getIv().invokeFunction("scheduledTimeout", EventInstanceManager.this);
-                                        } finally {
-                                                sL.unlock();
-                                        }
+                                        invokeScriptFunction("scheduledTimeout", EventInstanceManager.this);
                                 } catch (ScriptException | NoSuchMethodException ex) {
                                         Logger.getLogger(EventManager.class.getName()).log(Level.SEVERE, "Event '" + em.getName() + "' does not implement scheduledTimeout function.", ex);
                                 }
@@ -311,38 +309,32 @@ public class EventInstanceManager {
 	}
         
         public void addEventTimer(long time) {
-                if(event_schedule != null) {
-                        if(event_schedule.cancel(false)) {
+                if (event_schedule != null) {
+                        if (event_schedule.cancel(false)) {
                                 long nextTime = getTimeLeft() + time;
                                 eventTime += time;
 
                                 event_schedule = TimerManager.getInstance().schedule(new Runnable() {
                                         @Override
                                         public void run() {
+                                                dismissEventTimer();
+
                                                 try {
-                                                        dismissEventTimer();
-                                                        
-                                                        sL.lock();
-                                                        try {
-                                                                em.getIv().invokeFunction("scheduledTimeout", EventInstanceManager.this);
-                                                        } finally {
-                                                                sL.unlock();
-                                                        }
+                                                        invokeScriptFunction("scheduledTimeout", EventInstanceManager.this);
                                                 } catch (ScriptException | NoSuchMethodException ex) {
                                                         Logger.getLogger(EventManager.class.getName()).log(Level.SEVERE, "Event '" + em.getName() + "' does not implement scheduledTimeout function.", ex);
                                                 }
                                         }
                                 }, nextTime);
                         }
-                }
-                else {
+                } else {
                         startEventTimer(time);
                 }
         }
         
         private void dismissEventTimer() {
                 for(MapleCharacter chr: getPlayers()) {
-                        chr.getClient().getSession().write(MaplePacketCreator.removeClock());
+                        chr.getClient().announce(MaplePacketCreator.removeClock());
                 }
                 
                 event_schedule = null;
@@ -355,6 +347,7 @@ public class EventInstanceManager {
                         event_schedule.cancel(false);
                         event_schedule = null;
                 }
+                
                 dismissEventTimer();
         }
         
@@ -367,7 +360,7 @@ public class EventInstanceManager {
 	}
 
         public void registerParty(MapleCharacter chr) {
-                if(chr.isPartyLeader()) {
+                if (chr.isPartyLeader()) {
                         registerParty(chr.getParty(), chr.getMap());
                 }
         }
@@ -387,20 +380,16 @@ public class EventInstanceManager {
         private void registerExpeditionTeam(MapleExpedition exped, int recruitMap) {
 		expedition = exped;
                 
-                for(MapleCharacter chr: exped.getMembers()) {
-                        if(chr.getMapId() == recruitMap)
+                for (MapleCharacter chr: exped.getActiveMembers()) {
+                        if (chr.getMapId() == recruitMap) {
                                 registerPlayer(chr);
+                        }
                 }
 	}
 
-	public void unregisterPlayer(MapleCharacter chr) {
+	public void unregisterPlayer(final MapleCharacter chr) {
                 try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("playerUnregistered", EventInstanceManager.this, chr);
-                        } finally {
-                                sL.unlock();
-                        }
+                        invokeScriptFunction("playerUnregistered", EventInstanceManager.this, chr);
                 } catch (ScriptException | NoSuchMethodException ex) {
                         Logger.getLogger(EventManager.class.getName()).log(Level.SEVERE, "Event '" + em.getName() + "' does not implement playerUnregistered function.", ex);
                 }
@@ -459,180 +448,152 @@ public class EventInstanceManager {
 		}
 	}
 
-	public void movePlayer(MapleCharacter chr) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("moveMap", this, chr);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
-	}
-        
-        public void changedMap(MapleCharacter chr, int mapId) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("changedMap", this, chr, mapId);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {} // optional
-	}
-        
-        public void afterChangedMap(MapleCharacter chr, int mapId) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("afterChangedMap", this, chr, mapId);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {} // optional
-	}
-        
-        public void changedLeader(MapleCharacter ldr) {
+	public void movePlayer(final MapleCharacter chr) {
                 try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("changedLeader", this, ldr);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
-                
+                        invokeScriptFunction("moveMap", EventInstanceManager.this, chr);
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
+	}
+        
+        public void changedMap(final MapleCharacter chr, final int mapId) {
+                try {
+                        invokeScriptFunction("changedMap", EventInstanceManager.this, chr, mapId);
+                } catch (ScriptException | NoSuchMethodException ex) {} // optional
+	}
+        
+        public void afterChangedMap(final MapleCharacter chr, final int mapId) {
+                try {
+                        invokeScriptFunction("afterChangedMap", EventInstanceManager.this, chr, mapId);
+                } catch (ScriptException | NoSuchMethodException ex) {} // optional
+	}
+        
+        public synchronized void changedLeader(final MapleCharacter ldr) {
+                try {
+                        invokeScriptFunction("changedLeader", EventInstanceManager.this, ldr);
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
+		
                 leaderId = ldr.getId();
 	}
 	
-	public void monsterKilled(MapleMonster mob, boolean hasKiller) {
+	public void monsterKilled(final MapleMonster mob, final boolean hasKiller) {
+                int scriptResult = 0;
+                
 		sL.lock();
                 try {
                         mobs.remove(mob);
                         
                         if(eventStarted) {
-                                try {
-                                        em.getIv().invokeFunction("monsterKilled", mob, this, hasKiller);
-                                } catch (ScriptException | NoSuchMethodException ex) {
-                                        ex.printStackTrace();
-                                }
+                                scriptResult = 1;
 
                                 if (mobs.isEmpty()) {
-                                        try {
-                                                em.getIv().invokeFunction("allMonstersDead", this, hasKiller);
-                                        } catch (ScriptException | NoSuchMethodException ex) {
-                                                ex.printStackTrace();
-                                        }
+                                        scriptResult = 2;
                                 }
                         }
                 } finally {
                         sL.unlock();
                 }
+                
+                if (scriptResult > 0) {
+                        try {
+                                invokeScriptFunction("monsterKilled", mob, EventInstanceManager.this, hasKiller);
+                        } catch (ScriptException | NoSuchMethodException ex) {
+                                ex.printStackTrace();
+                        }
+                        
+                        if (scriptResult > 1) {
+                                try {
+                                        invokeScriptFunction("allMonstersDead", EventInstanceManager.this, hasKiller);
+                                } catch (ScriptException | NoSuchMethodException ex) {
+                                        ex.printStackTrace();
+                                }
+                        }
+                }
         }
         
-        public void friendlyKilled(MapleMonster mob, boolean hasKiller) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("friendlyKilled", mob, this, hasKiller);
-                        } finally {
-                                sL.unlock();
-                        }
+        public void friendlyKilled(final MapleMonster mob, final boolean hasKiller) {
+                try {
+                        invokeScriptFunction("friendlyKilled", mob, EventInstanceManager.this, hasKiller);
                 } catch (ScriptException | NoSuchMethodException ex) {} //optional
 	}
-
-	public void playerKilled(MapleCharacter chr) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("playerDead", this, chr);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
-	}
-
-        public void reviveMonster(MapleMonster mob) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("monsterRevive", this, mob);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {} // optional
+        
+        public void friendlyDamaged(final MapleMonster mob) {
+                try {
+                        invokeScriptFunction("friendlyDamaged", EventInstanceManager.this, mob);
+                } catch (ScriptException | NoSuchMethodException ex) {} // optional
 	}
         
-	public boolean revivePlayer(MapleCharacter chr) {
-		try {
-                        Object b;
-                    
-                        sL.lock();
-                        try {
-                                b = em.getIv().invokeFunction("playerRevive", this, chr);
-                        } finally {
-                                sL.unlock();
+        public void friendlyItemDrop(final MapleMonster mob) {
+                try {
+                        invokeScriptFunction("friendlyItemDrop", EventInstanceManager.this, mob);
+                } catch (ScriptException | NoSuchMethodException ex) {} // optional
+	}
+
+	public void playerKilled(final MapleCharacter chr) {
+                ThreadManager.getInstance().newTask(new Runnable() {
+                        @Override
+                        public void run() {
+                                try {
+                                        invokeScriptFunction("playerDead", EventInstanceManager.this, chr);
+                                } catch (ScriptException | NoSuchMethodException ex) {} // optional
                         }
-                    
-			if (b instanceof Boolean) {
-				return (Boolean) b;
-			}
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+                });
+	}
+
+        public void reviveMonster(final MapleMonster mob) {
+                try {
+                        invokeScriptFunction("monsterRevive", EventInstanceManager.this, mob);
+                } catch (ScriptException | NoSuchMethodException ex) {} // optional
+	}
+        
+	public boolean revivePlayer(final MapleCharacter chr) {
+                try {
+                        Object b = invokeScriptFunction("playerRevive", EventInstanceManager.this, chr);
+                        if (b instanceof Boolean) {
+                                return (Boolean) b;
+                        }
+                } catch (ScriptException | NoSuchMethodException ex) {} // optional
+                
 		return true;
 	}
         
-	public void playerDisconnected(MapleCharacter chr) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("playerDisconnected", this, chr);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+	public void playerDisconnected(final MapleCharacter chr) {
+                try {
+                        invokeScriptFunction("playerDisconnected", EventInstanceManager.this, chr);
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
                 
                 MapleEventRecallCoordinator.getInstance().storeEventInstance(chr.getId(), this);
 	}
-
-	/**
-	 *
-	 * @param chr
-	 * @param mob
-	 */
-	public void monsterKilled(MapleCharacter chr, MapleMonster mob) {
-		try {
-			Integer kc = killCount.get(chr);
+        
+	public void monsterKilled(MapleCharacter chr, final MapleMonster mob) {
+                try {
                         int inc;
                         
-                        sL.lock();
-                        try {
-                                inc = ((Double) em.getIv().invokeFunction("monsterValue", this, mob.getId())).intValue();
-                        } finally {
-                                sL.unlock();
+                        if (ServerConstants.JAVA_8) {
+                                inc = (int)invokeScriptFunction("monsterValue", EventInstanceManager.this, mob.getId());
+                        } else {
+                                inc = ((Double) invokeScriptFunction("monsterValue", EventInstanceManager.this, mob.getId())).intValue();
                         }
                         
-			if (kc == null) {
-				kc = inc;
-			} else {
-				kc += inc;
-			}
-			killCount.put(chr, kc);
-			if (expedition != null){
-				expedition.monsterKilled(chr, mob);
-			}
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+                        if (inc != 0) {
+                                Integer kc = killCount.get(chr);
+                                if (kc == null) {
+                                        kc = inc;
+                                } else {
+                                        kc += inc;
+                                }
+                                killCount.put(chr, kc);
+                                if (expedition != null){
+                                        expedition.monsterKilled(chr, mob);
+                                }
+                        }
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
 	}
 
 	public int getKillCount(MapleCharacter chr) {
@@ -647,39 +608,28 @@ public class EventInstanceManager {
                 } finally {
                         rL.unlock();
                 }
-            
-                Thread t = new Thread( new Runnable() {
-                        @Override
-                        public void run() {
-                                dispose(false);
-                        }
-                });
                 
-                t.start();
+                dispose(false);
         }
         
         public synchronized void dispose(boolean shutdown) {    // should not trigger any event script method after disposed
                 if(disposed) return;
                 
-                disposed = true;
                 try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("dispose", this);
-                        } finally {
-                                sL.unlock();
-                        }
+                        invokeScriptFunction("dispose", EventInstanceManager.this);
                 } catch (ScriptException | NoSuchMethodException ex) {
                         ex.printStackTrace();
                 }
-
-                mapFactory.dispose();
+                disposed = true;
+                
+                ess.dispose();
+                
                 wL.lock();
                 try {
                         for(MapleCharacter chr: chars.values()) chr.setEventInstance(null);
                         chars.clear();
                         mobs.clear();
-                        mapFactory = null;
+                        ess = null;
                 } finally {
                         wL.unlock();
                 }
@@ -692,18 +642,32 @@ public class EventInstanceManager {
                 killCount.clear();
                 mapIds.clear();
                 props.clear();
+                objectProps.clear();
                 
                 disposeExpedition();
                 
                 sL.lock();
                 try {
                         if(!eventCleared) em.disposeInstance(name);
-                        em = null;
                 } finally {
                         sL.unlock();
                 }
                 
-                disposeLocks();
+                TimerManager.getInstance().schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                                mapManager.dispose();   // issues from instantly disposing some event objects found thanks to MedicOP
+                                wL.lock();
+                                try {
+                                        mapManager = null;
+                                        em = null;
+                                } finally {
+                                        wL.unlock();
+                                }
+
+                                disposeLocks();
+                        }
+                }, 60 * 1000);
 	}
         
         private void disposeLocks() {
@@ -720,68 +684,41 @@ public class EventInstanceManager {
                 sL = sL.dispose();
         }
 
-	public MapleMapFactory getMapFactory() {
-		return mapFactory;
+	public MapleMapManager getMapFactory() {
+		return mapManager;
 	}
 
 	public void schedule(final String methodName, long delay) {
-                List<MapleCharacter> chrList = this.getPlayerList();
-                int mapid = !chrList.isEmpty() ? chrList.get(0).getMapId() : 0;
-                
-                Runnable r = new Runnable() {
-			@Override
-			public void run() {
-				try {
-                                        sL.lock();
-                                        try {
-                                               if(em == null) return;
-                                               em.getIv().invokeFunction(methodName, EventInstanceManager.this);
-                                        } finally {
-                                                sL.unlock();
+                rL.lock();
+                try {
+                        if (ess != null) {
+                                Runnable r = new Runnable() {
+                                        @Override
+                                        public void run() {
+                                                try {
+                                                        invokeScriptFunction(methodName, EventInstanceManager.this);
+                                                } catch (ScriptException | NoSuchMethodException ex) {
+                                                        ex.printStackTrace();
+                                                }
                                         }
-				} catch (ScriptException | NoSuchMethodException ex) {
-					ex.printStackTrace();
-				}
-			}
-		};
-                
-                getEm().getChannelServer().registerEventAction(mapid, r, delay);
+                                };
+
+                                ess.registerEntry(r, delay);
+                        }
+                } finally {
+                        rL.unlock();
+                }
 	}
 
 	public String getName() {
 		return name;
 	}
 
-	public void saveWinner(MapleCharacter chr) {
-                String emName;
-                sL.lock();
-                try {
-                       emName = em.getName();
-                } finally {
-                        sL.unlock();
-                }
-            
-		try {
-                        Connection con = DatabaseConnection.getConnection();
-			try (PreparedStatement ps = con.prepareStatement("INSERT INTO eventstats (event, instance, characterid, channel) VALUES (?, ?, ?, ?)")) {
-				ps.setString(1, emName);
-				ps.setString(2, getName());
-				ps.setInt(3, chr.getId());
-				ps.setInt(4, chr.getClient().getChannel());
-				ps.executeUpdate();
-			}
-                        
-                        con.close();
-		} catch (SQLException ex) {
-			ex.printStackTrace();
-		}
-	}
-
 	public MapleMap getMapInstance(int mapId) {
-		MapleMap map = mapFactory.getMap(mapId);
+		MapleMap map = mapManager.getMap(mapId);
                 map.setEventInstance(this);
 
-		if (!mapFactory.isMapLoaded(mapId)) {
+		if (!mapManager.isMapLoaded(mapId)) {
                         sL.lock();
                         try {
                                 if (em.getProperty("shuffleReactors") != null && em.getProperty("shuffleReactors").equals("true")) {
@@ -819,6 +756,15 @@ public class EventInstanceManager {
                         pL.unlock();
                 }
 	}
+        
+        public void setObjectProperty(String key, Object obj) {
+                pL.lock();
+                try {
+                        objectProps.put(key, obj);
+                } finally {
+                        pL.unlock();
+                }
+        }
 
 	public String getProperty(String key) {
                 pL.lock();
@@ -837,57 +783,46 @@ public class EventInstanceManager {
                         pL.unlock();
                 }
         }
+        
+        public Object getObjectProperty(String key) {
+                pL.lock();
+                try {
+                        return objectProps.get(key);
+                } finally {
+                        pL.unlock();
+                }
+        }
 	
-	public void leftParty(MapleCharacter chr) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("leftParty", this, chr);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+	public void leftParty(final MapleCharacter chr) {
+                try {
+                        invokeScriptFunction("leftParty", EventInstanceManager.this, chr);
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
 	}
 
 	public void disbandParty() {
 		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("disbandParty", this);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+                        invokeScriptFunction("disbandParty", EventInstanceManager.this);
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
 	}
 
 	public void clearPQ() {
                 try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("clearPQ", this);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+                        invokeScriptFunction("clearPQ", EventInstanceManager.this);
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
 	}
 
-	public void removePlayer(MapleCharacter chr) {
-		try {
-                        sL.lock();
-                        try {
-                                em.getIv().invokeFunction("playerExit", this, chr);
-                        } finally {
-                                sL.unlock();
-                        }
-		} catch (ScriptException | NoSuchMethodException ex) {
-			ex.printStackTrace();
-		}
+	public void removePlayer(final MapleCharacter chr) {
+                try {
+                        invokeScriptFunction("playerExit", EventInstanceManager.this, chr);
+                } catch (ScriptException | NoSuchMethodException ex) {
+                        ex.printStackTrace();
+                }
 	}
 
 	public boolean isLeader(MapleCharacter chr) {
@@ -977,9 +912,14 @@ public class EventInstanceManager {
         }
         
         private List<Integer> convertToIntegerArray(List<Double> list) {
-                List<Integer> intList = new ArrayList<>();
+            List<Integer> intList;
+            if(ServerConstants.JAVA_8)
+                 intList=new ArrayList<Integer> (new ArrayList(java.util.Arrays.asList(list.toArray())));
+            else
+            {
+                 intList = new ArrayList<>();
                 for(Double d: list) intList.add(d.intValue());
-
+            }
                 return intList;
         }
         
@@ -1012,7 +952,7 @@ public class EventInstanceManager {
         }
         
         private void dropExclusiveItems(MapleCharacter chr) {
-                AbstractPlayerInteraction api = chr.getClient().getAbstractPlayerInteraction();
+                AbstractPlayerInteraction api = chr.getAbstractPlayerInteraction();
                 
                 for(Integer item: exclusiveItems) {
                         api.removeAll(item);
@@ -1120,7 +1060,7 @@ public class EventInstanceManager {
 
                 if(!hasRewardSlot(player, eventLevel)) return false;
 
-                AbstractPlayerInteraction api = player.getClient().getAbstractPlayerInteraction();
+                AbstractPlayerInteraction api = player.getAbstractPlayerInteraction();
                 int rnd = (int)Math.floor(Math.random() * rewardsSet.size());
 
                 api.gainItem(rewardsSet.get(rnd), rewardsQty.get(rnd).shortValue());
@@ -1134,7 +1074,7 @@ public class EventInstanceManager {
                         
                         sL.lock();
                         try {
-                                em.getChannelServer().getExpeditions().remove(expedition);
+                                expedition.removeChannelExpedition(em.getChannelServer());
                         } finally {
                                 sL.unlock();
                         }
@@ -1143,15 +1083,11 @@ public class EventInstanceManager {
                 }
         }
         
-        public final void startEvent() {
+        public final synchronized void startEvent() {
+                eventStarted = true;
+                
                 try {
-                        sL.lock();
-                        try {
-                                eventStarted = true;
-                                em.getIv().invokeFunction("afterSetup", this);
-                        } finally {
-                                sL.unlock();
-                        }
+                        invokeScriptFunction("afterSetup", EventInstanceManager.this);
                 } catch (ScriptException | NoSuchMethodException ex) {
                         ex.printStackTrace();
                 }
@@ -1195,6 +1131,17 @@ public class EventInstanceManager {
                 
                 if(!eventCleared && leavingEventMap && !isEventTeamLeaderOn()) return true;
                 if(getPlayerCount() < minPlayers) return true;
+                
+                return false;
+        }
+        
+        public final boolean isExpeditionTeamLackingNow(boolean leavingEventMap, int minPlayers, MapleCharacter quitter) {
+                if(eventCleared) {
+                        if(leavingEventMap && getPlayerCount() <= 1) return true;
+                } else {
+                        // thanks Conrad for noticing expeditions don't need to have neither the leader nor meet the minimum requirement inside the event
+                        if(getPlayerCount() <= 1) return true;
+                }
                 
                 return false;
         }

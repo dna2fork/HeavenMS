@@ -21,16 +21,8 @@ package client.processor;
 
 import client.MapleClient;
 import client.MapleCharacter;
-import client.MapleStat;
-import java.awt.Point;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import server.maps.MapleMap;
-import server.movement.AbsoluteLifeMovement;
-import server.movement.LifeMovementFragment;
 import tools.MaplePacketCreator;
-import tools.Pair;
 
 /**
  *
@@ -49,7 +41,7 @@ public class BuybackProcessor {
             c.unlockClient();
         }
 
-        if(buyback) {
+        if (buyback) {
             String jobString;
             switch(chr.getJobStyle()) {
                 case WARRIOR:
@@ -77,23 +69,10 @@ public class BuybackProcessor {
                     jobString = "beginner";
             }
 
-            chr.setStance(0);
-
-            chr.setHp(chr.getMaxHp());
-            chr.setMp(chr.getMaxMp());
-
-            List<Pair<MapleStat, Integer>> hpmpupdate = new ArrayList<>(2);
-            hpmpupdate.add(new Pair<>(MapleStat.HP, Integer.valueOf(chr.getHp())));
-            hpmpupdate.add(new Pair<>(MapleStat.MP, Integer.valueOf(chr.getMp())));
-            c.announce(MaplePacketCreator.updatePlayerStats(hpmpupdate, true, chr));
-
-            AbsoluteLifeMovement alm = new AbsoluteLifeMovement(0, chr.getPosition(), 0, 0);
-            alm.setPixelsPerSecond(new Point(0, 0));
-            List<LifeMovementFragment> moveUpdate = Collections.singletonList((LifeMovementFragment) alm);
-
+            chr.healHpMp();
+            chr.broadcastStance(chr.isFacingLeft() ? 5 : 4);
+            
             MapleMap map = chr.getMap();
-            map.broadcastMessage(chr, MaplePacketCreator.movePlayer(c.getPlayer().getId(), moveUpdate), false);
-
             map.broadcastMessage(MaplePacketCreator.playSound("Buyback/" + jobString));
             map.broadcastMessage(MaplePacketCreator.earnTitleMessage(chr.getName() + " just bought back into the game!"));
 

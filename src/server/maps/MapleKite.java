@@ -3,7 +3,6 @@ package server.maps;
 import java.awt.Point;
 import client.MapleCharacter;
 import client.MapleClient;
-import constants.ServerConstants;
 import tools.MaplePacketCreator;
 
 public class MapleKite extends AbstractMapleMapObject {
@@ -43,12 +42,12 @@ public class MapleKite extends AbstractMapleMapObject {
 
     @Override
     public void sendDestroyData(MapleClient client) {
-        client.getSession().write(makeDestroyData());
+        client.announce(makeDestroyData());
     }
 
     @Override
     public void sendSpawnData(MapleClient client) {
-        client.getSession().write(makeSpawnData());
+        client.announce(makeSpawnData());
     }
 
     public final byte[] makeSpawnData() {

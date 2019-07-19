@@ -28,6 +28,7 @@ import client.inventory.MapleInventoryType;
 import constants.ServerConstants;
 import net.server.Server;
 import server.MapleItemInformationProvider;
+import tools.FilePrinter;
 import tools.MaplePacketCreator;
 
 /**
@@ -92,7 +93,8 @@ public abstract class CharacterFactory {
                 c.announce(MaplePacketCreator.addNewCharEntry(newchar));
                 
                 Server.getInstance().createCharacterEntry(newchar);
-                Server.getInstance().broadcastGMMessage(c.getWorld(), MaplePacketCreator.sendYellowTip("[NEW CHAR]: " + c.getAccountName() + " has created a new character with IGN " + name));
+                Server.getInstance().broadcastGMMessage(c.getWorld(), MaplePacketCreator.sendYellowTip("[New Char]: " + c.getAccountName() + " has created a new character with IGN " + name));
+                FilePrinter.print(FilePrinter.CREATED_CHAR + c.getAccountName() + ".txt", c.getAccountName() + " created character with IGN " + name);
                 
                 return 0;
         }        

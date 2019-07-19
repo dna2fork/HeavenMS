@@ -8339,7 +8339,7 @@
       <int name="npc" value="12100"/>
       <imgdir name="mob">
         <imgdir name="0">
-          <int name="id" value="1210100"/>
+          <int name="id" value="9500102"/>
           <int name="count" value="2"/>
         </imgdir>
       </imgdir>
@@ -29056,6 +29056,12 @@
           <int name="count" value="1"/>
         </imgdir>
       </imgdir>
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="4032491"/>
+          <int name="count" value="1"/>
+        </imgdir>
+      </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="28180">
@@ -29715,6 +29721,12 @@
           <int name="count" value="1"/>
         </imgdir>
       </imgdir>
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="4032495"/>
+          <int name="count" value="1"/>
+        </imgdir>
+      </imgdir>
     </imgdir>
     <imgdir name="0">
       <int name="npc" value="1032001"/>
@@ -30367,6 +30379,12 @@
           <int name="count" value="1"/>
         </imgdir>
       </imgdir>
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="4032493"/>
+          <int name="count" value="1"/>
+        </imgdir>
+      </imgdir>
     </imgdir>
     <imgdir name="0">
       <int name="npc" value="1052001"/>
@@ -30968,6 +30986,12 @@
           <int name="count" value="1"/>
         </imgdir>
       </imgdir>
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="4032492"/>
+          <int name="count" value="1"/>
+        </imgdir>
+      </imgdir>
     </imgdir>
     <imgdir name="0">
       <int name="npc" value="1012100"/>
@@ -31539,6 +31563,12 @@
       <imgdir name="mob">
         <imgdir name="0">
           <int name="id" value="9400611"/>
+          <int name="count" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="4032494"/>
           <int name="count" value="1"/>
         </imgdir>
       </imgdir>
@@ -34723,7 +34753,6 @@
     <imgdir name="0">
       <int name="npc" value="9201031"/>
       <int name="lvmin" value="23"/>
-      <string name="end" value="2010010100"/>
     </imgdir>
   </imgdir>
   <imgdir name="28333">
@@ -38100,6 +38129,7 @@
       <imgdir name="item">
         <imgdir name="0">
           <int name="id" value="1102061"/>
+          <int name="count" value="1"/>
         </imgdir>
       </imgdir>
     </imgdir>
@@ -38561,6 +38591,9 @@
         <imgdir name="48">
           <int name="id" value="5000060"/>
         </imgdir>
+        <imgdir name="49">
+          <int name="id" value="5000066"/>
+        </imgdir>
       </imgdir>
     </imgdir>
     <imgdir name="1">
@@ -38734,6 +38767,9 @@
         </imgdir>
         <imgdir name="48">
           <int name="id" value="5000060"/>
+        </imgdir>
+        <imgdir name="49">
+          <int name="id" value="5000066"/>
         </imgdir>
       </imgdir>
     </imgdir>
@@ -40710,6 +40746,13 @@
         <imgdir name="0">
           <int name="id" value="4220046"/>
           <int name="count" value="1"/>
+        </imgdir>
+      </imgdir>
+      <string name="endscript" value="q3250e"/>
+      <int name="infoNumber" value="7067"/>
+      <imgdir name="infoex">
+        <imgdir name="0">
+          <string name="value" value="3000"/>
         </imgdir>
       </imgdir>
     </imgdir>
@@ -49928,8 +49971,6 @@
     <imgdir name="0">
       <int name="npc" value="9110002"/>
       <int name="lvmin" value="20"/>
-      <string name="start" value="2000010100"/>
-      <string name="end" value="2000010200"/>
     </imgdir>
     <imgdir name="1">
       <int name="npc" value="9110002"/>
@@ -49945,8 +49986,6 @@
     <imgdir name="0">
       <int name="npc" value="9110002"/>
       <int name="lvmin" value="25"/>
-      <string name="start" value="2000010100"/>
-      <string name="end" value="2000010200"/>
     </imgdir>
     <imgdir name="1">
       <int name="npc" value="9110002"/>
@@ -49962,8 +50001,6 @@
     <imgdir name="0">
       <int name="npc" value="9120001"/>
       <int name="lvmin" value="25"/>
-      <string name="start" value="2000010100"/>
-      <string name="end" value="2000010200"/>
     </imgdir>
     <imgdir name="1">
       <int name="npc" value="9120001"/>
@@ -49979,8 +50016,6 @@
     <imgdir name="0">
       <int name="npc" value="9120001"/>
       <int name="lvmin" value="25"/>
-      <string name="start" value="2000010100"/>
-      <string name="end" value="2000010200"/>
       <imgdir name="quest">
         <imgdir name="0">
           <int name="id" value="4302"/>
@@ -50002,8 +50037,6 @@
     <imgdir name="0">
       <int name="npc" value="9120001"/>
       <int name="lvmin" value="25"/>
-      <string name="start" value="2000010100"/>
-      <string name="end" value="2000010200"/>
       <imgdir name="quest">
         <imgdir name="0">
           <int name="id" value="4303"/>
@@ -50025,8 +50058,6 @@
     <imgdir name="0">
       <int name="npc" value="9120001"/>
       <int name="lvmin" value="40"/>
-      <string name="start" value="2000010100"/>
-      <string name="end" value="2000010200"/>
       <imgdir name="quest">
         <imgdir name="0">
           <int name="id" value="4304"/>
@@ -50069,8 +50100,6 @@
     <imgdir name="0">
       <int name="npc" value="9120003"/>
       <int name="lvmin" value="55"/>
-      <string name="start" value="2000010100"/>
-      <string name="end" value="2000010200"/>
     </imgdir>
     <imgdir name="1">
       <int name="npc" value="9120003"/>
@@ -50086,8 +50115,6 @@
     <imgdir name="0">
       <int name="npc" value="9120003"/>
       <int name="lvmin" value="55"/>
-      <string name="start" value="2000010100"/>
-      <string name="end" value="2000010200"/>
       <imgdir name="quest">
         <imgdir name="0">
           <int name="id" value="4307"/>
@@ -59883,12 +59910,6 @@
     </imgdir>
     <imgdir name="1">
       <int name="npc" value="1092012"/>
-      <int name="infoNumber" value="6364"/>
-      <imgdir name="infoex">
-        <imgdir name="0">
-          <string name="value" value="2"/>
-        </imgdir>
-      </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="6370">
@@ -60008,12 +60029,7 @@
     </imgdir>
     <imgdir name="1">
       <int name="npc" value="2095000"/>
-      <int name="infoNumber" value="6411"/>
-      <imgdir name="infoex">
-        <imgdir name="0">
-          <string name="value" value="p2"/>
-        </imgdir>
-      </imgdir>
+      <string name="endscript" value="q6410e"/>
     </imgdir>
   </imgdir>
   <imgdir name="6700">

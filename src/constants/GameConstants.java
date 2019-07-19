@@ -1,5 +1,8 @@
 package constants;
 
+import client.MapleDisease;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import client.MapleJob;
@@ -18,6 +21,7 @@ import server.quest.MapleQuest;
 public class GameConstants {
     public static String[] WORLD_NAMES = {"Scania", "Bera", "Broa", "Windia", "Khaini", "Bellocan", "Mardia", "Kradia", "Yellonde", "Demethos", "Galicia", "El Nido", "Zenith", "Arcenia", "Kastia", "Judis", "Plana", "Kalluna", "Stius", "Croa", "Medere"};
     public static final int[]  OWL_DATA = new int[]{1082002, 2070005, 2070006, 1022047, 1102041, 2044705, 2340000, 2040017, 1092030, 2040804};
+    public static final String[] stats = {"tuc", "reqLevel", "reqJob", "reqSTR", "reqDEX", "reqINT", "reqLUK", "reqPOP", "cash", "cursed", "success", "setItemID", "equipTradeBlock", "durability", "randOption", "randStat", "masterLevel", "reqSkillLevel", "elemDefault", "incRMAS", "incRMAF", "incRMAI", "incRMAL", "canLevel", "skill", "charmEXP"};
     public static final int[] CASH_DATA = new int[]{50200004, 50200069, 50200117, 50100008, 50000047};
     
     // Ronan's rates upgrade system
@@ -25,9 +29,14 @@ public class GameConstants {
     private static final int[] MESO_RATE_GAIN = {1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105};
     private static final int[]  EXP_RATE_GAIN = {1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610};    //fibonacci :3
     
+    private static final int[] jobUpgradeBlob = {1, 20, 60, 110, 190};
+    private static final int[] jobUpgradeSpUp = {0, 1, 2, 3, 6};
     private final static Map<Integer, String> jobNames = new HashMap<>();
     private final static NumberFormat nfFormatter = new DecimalFormat("#,###,###,###");
     private final static NumberFormat nfParser = NumberFormat.getInstance(ServerConstants.USE_UNITPRICE_WITH_COMMA ? Locale.FRANCE : Locale.UK);
+    
+    public static final MapleDisease[] CPQ_DISEASES = {MapleDisease.SLOW, MapleDisease.SEDUCE, MapleDisease.STUN, MapleDisease.POISON,
+                                                       MapleDisease.SEAL, MapleDisease.DARKNESS, MapleDisease.WEAKEN, MapleDisease.CURSE};
     
     public static int getPlayerBonusDropRate(int slot) {
         return(DROP_RATE_GAIN[slot]);
@@ -41,9 +50,8 @@ public class GameConstants {
         return(EXP_RATE_GAIN[slot]);
     }
     
-    // used by the "goto" command
-    public static final HashMap<String, Integer> GOTO_MAPS = new HashMap<String, Integer>() {{
-        put("gmmap", 180000000);
+    // used by the "goto" command for players
+    public static final HashMap<String, Integer> GOTO_TOWNS = new HashMap<String, Integer>() {{
         put("southperry", 60000);
         put("amherst", 1000000);
         put("henesys", 100000000);
@@ -68,9 +76,24 @@ public class GameConstants {
         put("korean", 222000000);
         put("ellin", 300000000);
         put("nlc", 600000000);
+        put("showa", 801000000);
+        put("shrine", 800000000);
+        put("ariant", 260000000);
+        put("magatia", 261000000);
+        put("singapore", 540000000);
+        put("quay", 541000000);
+        put("kampung", 551000000);
+        put("amoria", 680000000);
+        put("temple", 270000100);
+        put("square", 103040000);
+        put("neo", 240070000);
+        put("mushking", 106020000);
+    }};
+    
+    // used by the "goto" command for only-GMs
+    public static final HashMap<String, Integer> GOTO_AREAS = new HashMap<String, Integer>() {{
+        put("gmmap", 180000000);
         put("excavation", 990000000);
-        put("pianus", 230040420);
-        put("horntail", 240060200);
         put("mushmom", 100000005);
         put("griffey", 240020101);
         put("manon", 240020401);
@@ -78,23 +101,171 @@ public class GameConstants {
         put("balrog", 105090900);
         put("zakum", 211042300);
         put("papu", 220080001);
-        put("showa", 801000000);
         put("guild", 200000301);
-        put("shrine", 800000000);
         put("skelegon", 240040511);
         put("hpq", 100000200);
-        put("ht", 240050400);
-        put("ariant", 260000000);
-        put("magatia", 261000000);
-        put("singapore", 540000000);
-        put("quay", 541000000);
-        put("kampung", 551000000);
+        put("pianus", 230040420);
+        put("horntail", 240050400);
+        put("pinkbean", 270050000);
         put("keep", 610020006);
-        put("amoria", 680000000);
-        put("temple", 270000100);
-        put("square", 103040000);
-        put("neo", 240070000);
+        put("dojo", 925020001);
+        put("bosspq", 970030000);
         put("fm", 910000000);
+    }};
+    
+    public static final List<String> GAME_SONGS = new ArrayList<String>(170) {{
+        add("Jukebox/Congratulation");
+        add("Bgm00/SleepyWood");
+        add("Bgm00/FloralLife");
+        add("Bgm00/GoPicnic");
+        add("Bgm00/Nightmare");
+        add("Bgm00/RestNPeace");
+        add("Bgm01/AncientMove");
+        add("Bgm01/MoonlightShadow");
+        add("Bgm01/WhereTheBarlogFrom");
+        add("Bgm01/CavaBien");
+        add("Bgm01/HighlandStar");
+        add("Bgm01/BadGuys");
+        add("Bgm02/MissingYou");
+        add("Bgm02/WhenTheMorningComes");
+        add("Bgm02/EvilEyes");
+        add("Bgm02/JungleBook");
+        add("Bgm02/AboveTheTreetops");
+        add("Bgm03/Subway");
+        add("Bgm03/Elfwood");
+        add("Bgm03/BlueSky");
+        add("Bgm03/Beachway");
+        add("Bgm03/SnowyVillage");
+        add("Bgm04/PlayWithMe");
+        add("Bgm04/WhiteChristmas");
+        add("Bgm04/UponTheSky");
+        add("Bgm04/ArabPirate");
+        add("Bgm04/Shinin'Harbor");
+        add("Bgm04/WarmRegard");
+        add("Bgm05/WolfWood");
+        add("Bgm05/DownToTheCave");
+        add("Bgm05/AbandonedMine");
+        add("Bgm05/MineQuest");
+        add("Bgm05/HellGate");
+        add("Bgm06/FinalFight");
+        add("Bgm06/WelcomeToTheHell");
+        add("Bgm06/ComeWithMe");
+        add("Bgm06/FlyingInABlueDream");
+        add("Bgm06/FantasticThinking");
+        add("Bgm07/WaltzForWork");
+        add("Bgm07/WhereverYouAre");
+        add("Bgm07/FunnyTimeMaker");
+        add("Bgm07/HighEnough");
+        add("Bgm07/Fantasia");
+        add("Bgm08/LetsMarch");
+        add("Bgm08/ForTheGlory");
+        add("Bgm08/FindingForest");
+        add("Bgm08/LetsHuntAliens");
+        add("Bgm08/PlotOfPixie");
+        add("Bgm09/DarkShadow");
+        add("Bgm09/TheyMenacingYou");
+        add("Bgm09/FairyTale");
+        add("Bgm09/FairyTalediffvers");
+        add("Bgm09/TimeAttack");
+        add("Bgm10/Timeless");
+        add("Bgm10/TimelessB");
+        add("Bgm10/BizarreTales");
+        add("Bgm10/TheWayGrotesque");
+        add("Bgm10/Eregos");
+        add("Bgm11/BlueWorld");
+        add("Bgm11/Aquarium");
+        add("Bgm11/ShiningSea");
+        add("Bgm11/DownTown");
+        add("Bgm11/DarkMountain");
+        add("Bgm12/AquaCave");
+        add("Bgm12/DeepSee");
+        add("Bgm12/WaterWay");
+        add("Bgm12/AcientRemain");
+        add("Bgm12/RuinCastle");
+        add("Bgm12/Dispute");
+        add("Bgm13/CokeTown");
+        add("Bgm13/Leafre");
+        add("Bgm13/Minar'sDream");
+        add("Bgm13/AcientForest");
+        add("Bgm13/TowerOfGoddess");
+        add("Bgm14/DragonLoad");
+        add("Bgm14/HonTale");
+        add("Bgm14/CaveOfHontale");
+        add("Bgm14/DragonNest");
+        add("Bgm14/Ariant");
+        add("Bgm14/HotDesert");
+        add("Bgm15/MureungHill");
+        add("Bgm15/MureungForest");
+        add("Bgm15/WhiteHerb");
+        add("Bgm15/Pirate");
+        add("Bgm15/SunsetDesert");
+        add("Bgm16/Duskofgod");
+        add("Bgm16/FightingPinkBeen");
+        add("Bgm16/Forgetfulness");
+        add("Bgm16/Remembrance");
+        add("Bgm16/Repentance");
+        add("Bgm16/TimeTemple");
+        add("Bgm17/MureungSchool1");
+        add("Bgm17/MureungSchool2");
+        add("Bgm17/MureungSchool3");
+        add("Bgm17/MureungSchool4");
+        add("Bgm18/BlackWing");
+        add("Bgm18/DrillHall");
+        add("Bgm18/QueensGarden");
+        add("Bgm18/RaindropFlower");
+        add("Bgm18/WolfAndSheep");
+        add("Bgm19/BambooGym");
+        add("Bgm19/CrystalCave");
+        add("Bgm19/MushCatle");
+        add("Bgm19/RienVillage");
+        add("Bgm19/SnowDrop");
+        add("Bgm20/GhostShip");
+        add("Bgm20/NetsPiramid");
+        add("Bgm20/UnderSubway");
+        add("Bgm21/2021year");
+        add("Bgm21/2099year");
+        add("Bgm21/2215year");
+        add("Bgm21/2230year");
+        add("Bgm21/2503year");
+        add("Bgm21/KerningSquare");
+        add("Bgm21/KerningSquareField");
+        add("Bgm21/KerningSquareSubway");
+        add("Bgm21/TeraForest");
+        add("BgmEvent/FunnyRabbit");
+        add("BgmEvent/FunnyRabbitFaster");
+        add("BgmEvent/wedding");
+        add("BgmEvent/weddingDance");
+        add("BgmEvent/wichTower");
+        add("BgmGL/amoria");
+        add("BgmGL/Amorianchallenge");
+        add("BgmGL/chapel");
+        add("BgmGL/cathedral");
+        add("BgmGL/Courtyard");
+        add("BgmGL/CrimsonwoodKeep");
+        add("BgmGL/CrimsonwoodKeepInterior");
+        add("BgmGL/GrandmastersGauntlet");
+        add("BgmGL/HauntedHouse");
+        add("BgmGL/NLChunt");
+        add("BgmGL/NLCtown");
+        add("BgmGL/NLCupbeat");
+        add("BgmGL/PartyQuestGL");
+        add("BgmGL/PhantomForest");
+        add("BgmJp/Feeling");
+        add("BgmJp/BizarreForest");
+        add("BgmJp/Hana");
+        add("BgmJp/Yume");
+        add("BgmJp/Bathroom");
+        add("BgmJp/BattleField");
+        add("BgmJp/FirstStepMaster");
+        add("BgmMY/Highland");
+        add("BgmMY/KualaLumpur");
+        add("BgmSG/BoatQuay_field");
+        add("BgmSG/BoatQuay_town");
+        add("BgmSG/CBD_field");
+        add("BgmSG/CBD_town");
+        add("BgmSG/Ghostship");
+        add("BgmUI/ShopBgm");
+        add("BgmUI/Title");
     }};
     
     // MapleStory default keyset
@@ -148,6 +319,14 @@ public class GameConstants {
         }
         
         return name;
+    }
+    
+    public static int getJobUpgradeLevelRange(int jobbranch) {
+        return jobUpgradeBlob[jobbranch];
+    }
+    
+    public static int getChangeJobSpUpgrade(int jobbranch) {
+        return jobUpgradeSpUp[jobbranch];
     }
     
     public static boolean isHallOfFameMap(int mapid) {
@@ -412,8 +591,22 @@ public class GameConstants {
     	return mapid >= 926010010 & mapid <= 930010000;
     }
     
+    public static boolean isAriantColiseumLobby(int mapid) {
+        int mapbranch = mapid / 1000;
+    	return mapbranch == 980010 && mapid % 10 == 0;
+    }
+    
+    public static boolean isAriantColiseumArena(int mapid) {
+        int mapbranch = mapid / 1000;
+    	return mapbranch == 980010 && mapid % 10 == 1;
+    }
+    
     public static boolean isPqSkillMap(int mapid) {
     	return isDojo(mapid) || isPyramid(mapid);
+    }
+    
+    public static boolean isFishingArea(int mapid) {
+    	return mapid == 120010000 || mapid == 251000100 || mapid == 541010110;
     }
     
     public static boolean isFinisherSkill(int skillId) {

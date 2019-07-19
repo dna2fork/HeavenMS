@@ -24,8 +24,9 @@ package net.server.channel.handlers;
 import client.MapleCharacter;
 import client.MapleClient;
 import java.awt.Point;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import constants.ServerConstants;
 import server.life.MapleMonster;
 import server.life.MapleMonsterInformationProvider;
 //import server.life.MobAttackInfo;
@@ -47,140 +48,130 @@ import tools.data.input.SeekableLittleEndianAccessor;
  * @author Ronan (HeavenMS)
  */
 public final class MoveLifeHandler extends AbstractMovementPacketHandler {
+        
 	@Override
 	public final void handlePacket(SeekableLittleEndianAccessor slea, MapleClient c) {
                 MapleCharacter player = c.getPlayer();
                 MapleMap map = player.getMap();
-            
+                
 		int objectid = slea.readInt();
 		short moveid = slea.readShort();
 		MapleMapObject mmo = map.getMapObject(objectid);
 		if (mmo == null || mmo.getType() != MapleMapObjectType.MONSTER) {
 			return;
 		}
+                
 		MapleMonster monster = (MapleMonster) mmo;
-		List<LifeMovementFragment> res = null;
-                List<MapleCharacter> banishPlayers = new ArrayList<>();
-		byte pNibbles = slea.readByte();
+                List<MapleCharacter> banishPlayers = null;
+                
+                byte pNibbles = slea.readByte();
 		byte rawActivity = slea.readByte();
-		byte useSkillId = slea.readByte();
-		byte useSkillLevel = slea.readByte();
+		int skillId = slea.readByte() & 0xff;
+		int skillLv = slea.readByte() & 0xff;
 		short pOption = slea.readShort();
                 slea.skip(8);
-
-		if (rawActivity >= 0) {
+                
+                if (rawActivity >= 0) {
 			rawActivity = (byte) (rawActivity & 0xFF >> 1);
 		}
 
-		boolean isAttack = inRangeInclusive(rawActivity, 12, 20);
-		boolean isSkill = inRangeInclusive(rawActivity, 21, 25);
-
-		byte attackId = (byte) (isAttack ? rawActivity - 12 : -1);
-		boolean nextMovementCouldBeSkill = (pNibbles & 0x0F) != 0;
-		boolean pUnk = (pNibbles & 0xF0) != 0;
-
-		int nextCastSkill = useSkillId;
-		int nextCastSkillLevel = useSkillLevel;
+		boolean isAttack = inRangeInclusive(rawActivity, 24, 41);
+		boolean isSkill = inRangeInclusive(rawActivity, 42, 59);
                 
 		MobSkill toUse = null;
-                int rndSkill = -1;
+                int useSkillId = 0, useSkillLevel = 0;
                 
-                if(monster.getNoSkills() > 0) {
-                        if(nextMovementCouldBeSkill) {
-                                rndSkill = Randomizer.nextInt(monster.getNoSkills());
-                        }
-                } else {
-                        nextMovementCouldBeSkill = false;
-                }
-		
-                if(monster.applyAnimationIfRoaming((attackId - 13) / 2, rndSkill)) {
-                        if (rndSkill > -1) {
-                                Pair<Integer, Integer> skillToUse = monster.getSkills().get(rndSkill);
-                                nextCastSkill = skillToUse.getLeft();
-                                nextCastSkillLevel = skillToUse.getRight();
-                                toUse = MobSkillFactory.getMobSkill(nextCastSkill, nextCastSkillLevel);
+                MobSkill nextUse = null;
+                int nextSkillId = 0, nextSkillLevel = 0;
+                
+                boolean nextMovementCouldBeSkill = !(isSkill || (pNibbles != 0));
+                
+                int castPos;
+                if (isSkill) {
+                        useSkillId = skillId;
+                        useSkillLevel = skillLv;
+                        
+                        castPos = monster.getSkillPos(useSkillId, useSkillLevel);
+                        if (castPos != -1) {
+                                toUse = MobSkillFactory.getMobSkill(useSkillId, useSkillLevel);
                                 
-                                if (!isSkill && !isAttack) {
-                                        long curtime = currentServerTime();
-                                        if(curtime >= monster.getNextBasicSkillTime()) {  // dont use the special attack too often, chase the player f3
-                                                //MobAttackInfo mobAttack = MobAttackInfoFactory.getMobAttackInfo(monster, attackId);
-                                                monster.setNextBasicSkillTime(curtime);
+                                if (monster.canUseSkill(toUse, true)) {
+                                        int animationTime = MapleMonsterInformationProvider.getInstance().getMobSkillAnimationTime(toUse);
+                                        if(animationTime > 0 && toUse.getSkillId() != 129) {
+                                                toUse.applyDelayedEffect(player, monster, true, animationTime);
                                         } else {
-                                                toUse = null;   // paliative measure for suspicious mob movement
-                                        }
-                                }
-
-                                if (toUse != null) {
-                                        int percHpLeft = (int) (((float) monster.getHp() / monster.getMaxHp()) * 100);
-                                        if (nextCastSkill != toUse.getSkillId() || nextCastSkillLevel != toUse.getSkillLevel()) {
-                                                //toUse.resetAnticipatedSkill();
-                                                return;
-                                        } else if (toUse.getHP() < percHpLeft) {
-                                                toUse = null;
-                                        } else if (monster.canUseSkill(toUse)) {
-                                                int animationTime = MapleMonsterInformationProvider.getInstance().getMobSkillAnimationTime(monster.getId(), rndSkill);
-                                                if(animationTime > 0) {
-                                                        toUse.applyDelayedEffect(player, monster, true, banishPlayers, animationTime);
-                                                } else {
-                                                        toUse.applyEffect(player, monster, true, banishPlayers);
-                                                }
-                                        } else {
-                                                toUse = null;
+                                                banishPlayers = new LinkedList<>();
+                                                toUse.applyEffect(player, monster, true, banishPlayers);
                                         }
                                 }
                         }
                 } else {
-                        if(rndSkill > -1) {
-                                nextMovementCouldBeSkill = false;
+                        castPos = (rawActivity - 24) / 2;
+                        
+                        int atkStatus = monster.canUseAttack(castPos, isSkill);
+                        if (atkStatus < 1) {
+                                rawActivity = -1;
+                                pOption = 0;
                         }
                 }
                 
-                if(toUse == null) {
-                        useSkillId = 0;
-                        useSkillLevel = 0;
-                        rawActivity = -1;
-                        pOption = 0;
+                int mobMp = monster.getMp();
+                if (nextMovementCouldBeSkill) {
+                        int noSkills = monster.getNoSkills();
+                        if (noSkills > 0) {
+                                int rndSkill = Randomizer.nextInt(noSkills);
+                                
+                                Pair<Integer, Integer> skillToUse = monster.getSkills().get(rndSkill);
+                                nextSkillId = skillToUse.getLeft();
+                                nextSkillLevel = skillToUse.getRight();
+                                nextUse = MobSkillFactory.getMobSkill(nextSkillId, nextSkillLevel);
+                                
+                                if (!(nextUse != null && monster.canUseSkill(nextUse, false) && nextUse.getHP() >= (int) (((float) monster.getHp() / monster.getMaxHp()) * 100) && mobMp >= nextUse.getMpCon())) {
+                                        // thanks OishiiKawaiiDesu for noticing mobs trying to cast skills they are not supposed to be able
+                                        
+                                        nextSkillId = 0;
+                                        nextSkillLevel = 0;
+                                        nextUse = null;
+                                }
+                        }
                 }
                 
 		slea.readByte();
 		slea.readInt(); // whatever
 		short start_x = slea.readShort(); // hmm.. startpos?
 		short start_y = slea.readShort(); // hmm...
-		Point startPos = new Point(start_x, start_y);
-		res = parseMovement(slea);
-		if (monster.getController() != player) {
-			if (monster.isAttackedBy(player)) {
-				monster.switchController(player, true);
-			} else {
-				return;
-			}
-		} else if (rawActivity == -1 && monster.isControllerKnowsAboutAggro() && !monster.isMobile() && !monster.isFirstAttack()) {
-                        monster.setControllerHasAggro(false);
-			monster.setControllerKnowsAboutAggro(false);
-		}
-		boolean aggro = monster.isControllerHasAggro();
+		Point startPos = new Point(start_x, start_y - 2);
+		long movementDataStart = slea.getPosition();
+        updatePosition(slea, monster, 0);
+        long movementDataLength = slea.getPosition() - movementDataStart; //how many bytes were read by updatePosition
 		
-                if (toUse != null) {
-                        c.announce(MaplePacketCreator.moveMonsterResponse(objectid, moveid, monster.getMp(), aggro, toUse.getSkillId(), toUse.getSkillLevel()));
+        Boolean aggro = monster.aggroMoveLifeUpdate(player);
+        if (aggro == null) return;
+        
+        if (nextUse != null) {
+            c.announce(MaplePacketCreator.moveMonsterResponse(objectid, moveid, mobMp, aggro, nextSkillId, nextSkillLevel));
 		} else {
-			c.announce(MaplePacketCreator.moveMonsterResponse(objectid, moveid, monster.getMp(), aggro));
+			c.announce(MaplePacketCreator.moveMonsterResponse(objectid, moveid, mobMp, aggro));
 		}
                 
-		if (aggro) {
-			monster.setControllerKnowsAboutAggro(true);
-		}
-		if (res != null) {
-                        map.broadcastMessage(player, MaplePacketCreator.moveMonster(objectid, nextMovementCouldBeSkill, rawActivity, useSkillId, useSkillLevel, pOption, startPos, res), monster.getPosition());
-			updatePosition(res, monster, -1);
+		if (movementDataLength > 0) {
+            if (ServerConstants.USE_DEBUG_SHOW_RCVD_MVLIFE) {
+                System.out.println((isSkill ? "SKILL " : (isAttack ? "ATTCK " : " ")) + "castPos: " + castPos + " rawAct: " + rawActivity + " opt: " + pOption + " skillID: " + useSkillId + " skillLV: " + useSkillLevel + " " + "allowSkill: " + nextMovementCouldBeSkill + " mobMp: " + mobMp);
+            }
+            slea.seek(movementDataStart);
+            map.broadcastMessage(player, MaplePacketCreator.moveMonster(objectid, nextMovementCouldBeSkill, rawActivity, useSkillId, useSkillLevel, pOption, startPos, slea, movementDataLength), monster.getPosition());
+			//updatePosition(res, monster, -2); //does this need to be done after the packet is broadcast?
 			map.moveMonster(monster, monster.getPosition());
 		}
                 
-                for (MapleCharacter chr : banishPlayers) {
-                       chr.changeMapBanish(monster.getBanish().getMap(), monster.getBanish().getPortal(), monster.getBanish().getMsg());
+                if (banishPlayers != null) {
+                        for (MapleCharacter chr : banishPlayers) {
+                               chr.changeMapBanish(monster.getBanish().getMap(), monster.getBanish().getPortal(), monster.getBanish().getMsg());
+                        }
                 }
 	}
 
-	public static boolean inRangeInclusive(Byte pVal, Integer pMin, Integer pMax) {
+	private static boolean inRangeInclusive(Byte pVal, Integer pMin, Integer pMax) {
 		return !(pVal < pMin) || (pVal > pMax);
 	}
 }

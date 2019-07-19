@@ -23,12 +23,16 @@ package net.server.channel.handlers;
 
 import client.MapleClient;
 import client.autoban.AutobanFactory;
+import constants.ServerConstants;
 import net.AbstractMaplePacketHandler;
 import tools.FilePrinter;
+import tools.LogHelper;
 import tools.MaplePacketCreator;
 import tools.data.input.SeekableLittleEndianAccessor;
 
 public final class PetChatHandler extends AbstractMaplePacketHandler {
+    
+    @Override
     public final void handlePacket(SeekableLittleEndianAccessor slea, MapleClient c) {
         int petId = slea.readInt();
         slea.readInt();
@@ -41,10 +45,13 @@ public final class PetChatHandler extends AbstractMaplePacketHandler {
         String text = slea.readMapleAsciiString();
         if (text.length() > Byte.MAX_VALUE) {
         	AutobanFactory.PACKET_EDIT.alert(c.getPlayer(), c.getPlayer().getName() + " tried to packet edit with pets.");
-        	FilePrinter.printError(FilePrinter.EXPLOITS + c.getPlayer().getName() + ".txt", c.getPlayer().getName() + " tried to send text with length of " + text.length() + "\r\n");
+        	FilePrinter.printError(FilePrinter.EXPLOITS + c.getPlayer().getName() + ".txt", c.getPlayer().getName() + " tried to send text with length of " + text.length());
         	c.disconnect(true, false);
         	return;
         }
         c.getPlayer().getMap().broadcastMessage(c.getPlayer(), MaplePacketCreator.petChat(c.getPlayer().getId(), pet, act, text), true);
+        if (ServerConstants.USE_ENABLE_CHAT_LOG) {
+            LogHelper.logChat(c, "Pet", text);
+        }
     } 
 }

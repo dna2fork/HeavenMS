@@ -55,7 +55,7 @@ public final class AdminCommandHandler extends AbstractMaplePacketHandler {
                 int[][] toSpawn = MapleItemInformationProvider.getInstance().getSummonMobs(slea.readInt());
                 for (int z = 0; z < toSpawn.length; z++) {
                     int[] toSpawnChild = toSpawn[z];
-                    if (Randomizer.nextInt(101) <= toSpawnChild[1]) {
+                    if (Randomizer.nextInt(100) < toSpawnChild[1]) {
                         c.getPlayer().getMap().spawnMonsterOnGroundBelow(MapleLifeFactory.getMonster(toSpawnChild[0]), c.getPlayer().getPosition());
                     }
                 }
@@ -132,7 +132,6 @@ public final class AdminCommandHandler extends AbstractMaplePacketHandler {
                     MapleMonster monster = (MapleMonster) monsterx.get(x);
                     if (monster.getId() == mobToKill) {
                         c.getPlayer().getMap().killMonster(monster, c.getPlayer(), true);
-                        //monster.giveExpToCharacter(c.getPlayer(), monster.getExp(), true, 1); already being done
                     }
                 }
                 break;

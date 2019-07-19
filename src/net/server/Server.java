@@ -57,14 +57,18 @@ import net.server.channel.Channel;
 import net.server.guild.MapleAlliance;
 import net.server.guild.MapleGuild;
 import net.server.guild.MapleGuildCharacter;
+import net.server.worker.BossLogWorker;
 import net.server.worker.CharacterDiseaseWorker;
 import net.server.worker.CouponWorker;
 import net.server.worker.EventRecallCoordinatorWorker;
+import net.server.worker.DueyFredrickWorker;
+import net.server.worker.InvitationWorker;
 import net.server.worker.LoginCoordinatorWorker;
 import net.server.worker.LoginStorageWorker;
 import net.server.worker.RankingCommandWorker;
 import net.server.worker.RankingLoginWorker;
 import net.server.worker.ReleaseLockWorker;
+import net.server.worker.RespawnWorker;
 import net.server.world.World;
 
 import org.apache.mina.core.buffer.IoBuffer;
@@ -78,20 +82,29 @@ import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 import client.MapleClient;
 import client.MapleCharacter;
 import client.SkillFactory;
+import client.command.CommandsExecutor;
 import client.inventory.Item;
 import client.inventory.ItemFactory;
+import client.inventory.MaplePet;
+import client.inventory.manipulator.MapleCashidGenerator;
 import client.newyear.NewYearCardRecord;
 import constants.ItemConstants;
 import constants.GameConstants;
+import constants.OpcodeConstants;
 import constants.ServerConstants;
+import java.util.TimeZone;
+import net.server.coordinator.MapleSessionCoordinator;
 import server.CashShop.CashItemFactory;
+import server.MapleSkillbookInformationProvider;
+import server.ThreadManager;
 import server.TimerManager;
+import server.expeditions.MapleExpeditionBossLog;
 import server.life.MaplePlayerNPCFactory;
 import server.quest.MapleQuest;
 import tools.AutoJCE;
 import tools.DatabaseConnection;
-import tools.FilePrinter;
 import tools.Pair;
+import org.apache.mina.core.session.IoSession;
 
 public class Server {
     
@@ -145,6 +158,10 @@ public class Server {
     private boolean availableDeveloperRoom = false;
     private boolean online = false;
     public static long uptime = System.currentTimeMillis();
+    
+    public int getCurrentTimestamp() {
+        return (int) (Server.getInstance().getCurrentTime() - Server.uptime);
+    }
     
     public long getCurrentTime() {  // returns a slightly delayed time value, under frequency of UPDATE_INTERVAL
         return serverCurrentTime;
@@ -329,7 +346,7 @@ public class Server {
             if(p == null) {
                 return -1;
             }
-
+            
             channelid++;
             World world = this.getWorld(worldid);
             Channel channel = new Channel(worldid, channelid, getCurrentTime());
@@ -387,19 +404,21 @@ public class Server {
             int exprate = getWorldProperty(p, "exprate", i, ServerConstants.EXP_RATE);
             int mesorate = getWorldProperty(p, "mesorate", i, ServerConstants.MESO_RATE);
             int droprate = getWorldProperty(p, "droprate", i, ServerConstants.DROP_RATE);
+            int bossdroprate = getWorldProperty(p, "bossdroprate", i, ServerConstants.BOSS_DROP_RATE);
             int questrate = getWorldProperty(p, "questrate", i, ServerConstants.QUEST_RATE);
             int travelrate = getWorldProperty(p, "travelrate", i, ServerConstants.TRAVEL_RATE);
+            int fishingrate = getWorldProperty(p, "fishrate", i, ServerConstants.FISHING_RATE);
             
             World world = new World(i,
                     Integer.parseInt(p.getProperty("flag" + i)),
                     p.getProperty("eventmessage" + i),
-                    exprate, droprate, mesorate, questrate, travelrate);
+                    exprate, droprate, bossdroprate, mesorate, questrate, travelrate, fishingrate);
 
             worldRecommendedList.add(new Pair<>(i, p.getProperty("whyamirecommended" + i)));
             worlds.add(world);
 
             Map<Integer, String> channelInfo = new HashMap<>();
-            long bootTime = System.currentTimeMillis();
+            long bootTime = getCurrentTime();
             for (int j = 1; j <= Integer.parseInt(p.getProperty("channels" + i)); j++) {
                 int channelid = j;
                 Channel channel = new Channel(i, channelid, bootTime);
@@ -479,15 +498,12 @@ public class Server {
         return true;
     }
     
-    private void resetServerWorlds() {
+    private void resetServerWorlds() {  // thanks maple006 for noticing proprietary lists assigned to null
         wldWLock.lock();
         try {
             worlds.clear();
-            worlds = null;
             channels.clear();
-            channels = null;
             worldRecommendedList.clear();
-            worldRecommendedList = null;
         } finally {
             wldWLock.unlock();
         }
@@ -514,8 +530,46 @@ public class Server {
         return Math.max(0, nextHour.getTimeInMillis() - System.currentTimeMillis());
     }
     
+    private static long getTimeLeftForNextDay() {
+        Calendar nextDay = Calendar.getInstance();
+        nextDay.add(Calendar.DAY_OF_MONTH, 1);
+        nextDay.set(Calendar.HOUR, 0);
+        nextDay.set(Calendar.MINUTE, 0);
+        nextDay.set(Calendar.SECOND, 0);
+        
+        return Math.max(0, nextDay.getTimeInMillis() - System.currentTimeMillis());
+    }
+    
     public Map<Integer, Integer> getCouponRates() {
         return couponRates;
+    }
+    
+    public static void cleanNxcodeCoupons(Connection con) throws SQLException {
+        if (!ServerConstants.USE_CLEAR_OUTDATED_COUPONS) return;
+        
+        long timeClear = System.currentTimeMillis() - 14 * 24 * 60 * 60 * 1000;
+        
+        PreparedStatement ps = con.prepareStatement("SELECT * FROM nxcode WHERE expiration <= ?");
+        ps.setLong(1, timeClear);
+        ResultSet rs = ps.executeQuery();
+
+        if (!rs.isLast()) {
+            PreparedStatement ps2 = con.prepareStatement("DELETE FROM nxcode_items WHERE codeid = ?");
+            while (rs.next()) {
+                ps2.setInt(1, rs.getInt("id"));
+                ps2.addBatch();
+            }
+            ps2.executeBatch();
+            ps2.close();
+            
+            ps2 = con.prepareStatement("DELETE FROM nxcode WHERE expiration <= ?");
+            ps2.setLong(1, timeClear);
+            ps2.executeUpdate();
+            ps2.close();
+        }
+        
+        rs.close();
+        ps.close();
     }
     
     private void loadCouponRates(Connection c) throws SQLException {
@@ -534,7 +588,7 @@ public class Server {
     }
     
     public List<Integer> getActiveCoupons() {
-        synchronized(activeCoupons) {
+        synchronized (activeCoupons) {
             return activeCoupons;
         }
     }
@@ -551,7 +605,7 @@ public class Server {
     
     public void toggleCoupon(Integer couponId) {
         if(ItemConstants.isRateCoupon(couponId)) {
-            synchronized(activeCoupons) {
+            synchronized (activeCoupons) {
                 if(activeCoupons.contains(couponId)) {
                     activeCoupons.remove(couponId);
                 }
@@ -565,7 +619,7 @@ public class Server {
     }
     
     public void updateActiveCoupons() throws SQLException {
-        synchronized(activeCoupons) {
+        synchronized (activeCoupons) {
             activeCoupons.clear();
             Calendar c = Calendar.getInstance();
 
@@ -748,7 +802,7 @@ public class Server {
                 worldQuery = (" AND `characters`.`world` >= 0 AND `characters`.`world` <= " + Math.abs(worldid));
             }
             
-            ps = con.prepareStatement("SELECT `characters`.`name`, `characters`.`level`, `characters`.`world` FROM `characters` LEFT JOIN accounts ON accounts.id = characters.accountid WHERE `characters`.`gm` < 2 AND `accounts`.`banned` = '0'" + worldQuery + " ORDER BY " + (!ServerConstants.USE_WHOLE_SERVER_RANKING ? "world, " : "") + "level DESC, exp DESC LIMIT 50");
+            ps = con.prepareStatement("SELECT `characters`.`name`, `characters`.`level`, `characters`.`world` FROM `characters` LEFT JOIN accounts ON accounts.id = characters.accountid WHERE `characters`.`gm` < 2 AND `accounts`.`banned` = '0'" + worldQuery + " ORDER BY " + (!ServerConstants.USE_WHOLE_SERVER_RANKING ? "world, " : "") + "level DESC, exp DESC, lastExpGainTime ASC LIMIT 50");
             rs = ps.executeQuery();
             
             if (!ServerConstants.USE_WHOLE_SERVER_RANKING) {
@@ -803,10 +857,11 @@ public class Server {
         }
 
         System.out.println("HeavenMS v" + ServerConstants.VERSION + " starting up.\r\n");
-
         
         if(ServerConstants.SHUTDOWNHOOK)
             Runtime.getRuntime().addShutdownHook(new Thread(shutdown(false)));
+        
+        TimeZone.setDefault(TimeZone.getTimeZone(ServerConstants.TIMEZONE));
         
         Connection c = null;
         try {
@@ -818,6 +873,7 @@ public class Server {
             ps.executeUpdate();
             ps.close();
             
+            cleanNxcodeCoupons(c);
             loadCouponRates(c);
             updateActiveCoupons();
             
@@ -825,11 +881,16 @@ public class Server {
         } catch (SQLException sqle) {
             sqle.printStackTrace();
         }
+        
+        MaplePet.clearMissingPetsFromDb();
+        MapleCashidGenerator.loadExistentCashIdsFromDb();
+        
         IoBuffer.setUseDirectBuffer(false);
         IoBuffer.setAllocator(new SimpleBufferAllocator());
         acceptor = new NioSocketAcceptor();
         acceptor.getFilterChain().addLast("codec", (IoFilter) new ProtocolCodecFilter(new MapleCodecFactory()));
         
+        ThreadManager.getInstance().start();
         TimerManager tMan = TimerManager.getInstance();
         tMan.start();
         tMan.register(tMan.purge(), ServerConstants.PURGING_INTERVAL);//Purging ftw...
@@ -844,14 +905,20 @@ public class Server {
         tMan.register(new LoginCoordinatorWorker(), 60 * 60 * 1000, timeLeft);
         tMan.register(new EventRecallCoordinatorWorker(), 60 * 60 * 1000, timeLeft);
         tMan.register(new LoginStorageWorker(), 2 * 60 * 1000, 2 * 60 * 1000);
+        tMan.register(new DueyFredrickWorker(), 60 * 60 * 1000, timeLeft);
+        tMan.register(new InvitationWorker(), 30 * 1000, 30 * 1000);
+        tMan.register(new RespawnWorker(), ServerConstants.RESPAWN_INTERVAL, ServerConstants.RESPAWN_INTERVAL);
+        
+        timeLeft = getTimeLeftForNextDay();
+        MapleExpeditionBossLog.resetBossLogTable();
+        tMan.register(new BossLogWorker(), 24 * 60 * 60 * 1000, timeLeft);
         
         long timeToTake = System.currentTimeMillis();
         SkillFactory.loadAllSkills();
         System.out.println("Skills loaded in " + ((System.currentTimeMillis() - timeToTake) / 1000.0) + " seconds");
 
         timeToTake = System.currentTimeMillis();
-        //MapleItemInformationProvider.getInstance().getAllItems(); //unused, rofl
-
+        
         CashItemFactory.getSpecialCashItems();
         System.out.println("Items loaded in " + ((System.currentTimeMillis() - timeToTake) / 1000.0) + " seconds");
         
@@ -891,17 +958,10 @@ public class Server {
 
         System.out.println("HeavenMS is now online.\r\n");
         online = true;
-    }
-
-    public void shutdown() {
-    	try {
-	        TimerManager.getInstance().stop();
-	        acceptor.unbind();
-    	} catch (NullPointerException e) {
-    		FilePrinter.printError(FilePrinter.EXCEPTION_CAUGHT, e);
-    	}
-        System.out.println("Server offline.");
-        System.exit(0);// BOEIEND :D
+        
+        MapleSkillbookInformationProvider.getInstance();
+        OpcodeConstants.generateOpcodeNames();
+        CommandsExecutor.getInstance();
     }
 
     public static void main(String args[]) {
@@ -1464,23 +1524,44 @@ public class Server {
         return new Pair<>(characterCount, wchars);
     }
     
-    public void loadAccountCharacters(MapleClient c) {
-        Integer accId = c.getAccID();
-        boolean firstAccountLogin;
-        
+    public void loadAllAccountsCharactersView() {
+        try {
+            Connection con = DatabaseConnection.getConnection();
+            PreparedStatement ps = con.prepareStatement("SELECT id FROM accounts");
+            ResultSet rs = ps.executeQuery();
+            
+            while (rs.next()) {
+                int accountId = rs.getInt("id");
+                if (isFirstAccountLogin(accountId)) {
+                    loadAccountCharactersView(accountId, 0, 0);
+                }
+            }
+            
+            rs.close();
+            ps.close();
+            con.close();
+        } catch (SQLException se) {
+            se.printStackTrace();
+        }
+    }
+    
+    private boolean isFirstAccountLogin(Integer accId) {
         lgnRLock.lock();
         try {
-            firstAccountLogin = !accountChars.containsKey(accId);
+            return !accountChars.containsKey(accId);
         } finally {
             lgnRLock.unlock();
         }
-        
-        if(!firstAccountLogin) {
+    }
+    
+    public void loadAccountCharacters(MapleClient c) {
+        Integer accId = c.getAccID();
+        if (!isFirstAccountLogin(accId)) {
             Set<Integer> accWorlds = new HashSet<>();
             
             lgnRLock.lock();
             try {
-                for(Integer chrid : getAccountCharacterEntries(accId)) {
+                for (Integer chrid : getAccountCharacterEntries(accId)) {
                     accWorlds.add(worldChars.get(chrid));
                 }
             } finally {
@@ -1488,12 +1569,12 @@ public class Server {
             }
             
             int gmLevel = 0;
-            for(Integer aw : accWorlds) {
+            for (Integer aw : accWorlds) {
                 World wserv = this.getWorld(aw);
                 
                 if (wserv != null) {
-                    for(MapleCharacter chr : wserv.getAllCharactersView()) {
-                        if(gmLevel < chr.gmLevel()) gmLevel = chr.gmLevel();
+                    for (MapleCharacter chr : wserv.getAllCharactersView()) {
+                        if (gmLevel < chr.gmLevel()) gmLevel = chr.gmLevel();
                     }
                 }
             }
@@ -1520,14 +1601,14 @@ public class Server {
                 chars = new HashSet<>(5);
             }
             
-            for(int wid = fromWorldid; wid < wlist.size(); wid++) {
+            for (int wid = fromWorldid; wid < wlist.size(); wid++) {
                 World w = wlist.get(wid);
                 List<MapleCharacter> wchars = accChars.get(wid);
                 w.loadAccountCharactersView(accId, wchars);
                 
-                for(MapleCharacter chr : wchars) {
+                for (MapleCharacter chr : wchars) {
                     int cid = chr.getId();
-                    if(gmLevel < chr.gmLevel()) gmLevel = chr.gmLevel();
+                    if (gmLevel < chr.gmLevel()) gmLevel = chr.gmLevel();
                     
                     chars.add(cid);
                     worldChars.put(cid, wid);
@@ -1542,12 +1623,12 @@ public class Server {
         return gmLevel;
     }
     
-    private static String getRemoteIp(InetSocketAddress isa) {
-        return isa.getAddress().getHostAddress();
+    private static String getRemoteIp(IoSession session) {
+        return MapleSessionCoordinator.getSessionRemoteAddress(session);
     }
     
-    public void setCharacteridInTransition(InetSocketAddress isa, int charId) {
-        String remoteIp = getRemoteIp(isa);
+    public void setCharacteridInTransition(IoSession session, int charId) {
+        String remoteIp = getRemoteIp(session);
         
         lgnWLock.lock();
         try {
@@ -1557,8 +1638,12 @@ public class Server {
         }
     }
     
-    public boolean validateCharacteridInTransition(InetSocketAddress isa, int charId) {
-        String remoteIp = getRemoteIp(isa);
+    public boolean validateCharacteridInTransition(IoSession session, int charId) {
+        if (!ServerConstants.USE_IP_VALIDATION) {
+            return true;
+        }
+        
+        String remoteIp = getRemoteIp(session);
         
         lgnWLock.lock();
         try {
@@ -1566,6 +1651,36 @@ public class Server {
             return cid != null && cid.equals(charId);
         } finally {
             lgnWLock.unlock();
+        }
+    }
+    
+    public Integer freeCharacteridInTransition(IoSession session) {
+        if (!ServerConstants.USE_IP_VALIDATION) {
+            return null;
+        }
+        
+        String remoteIp = getRemoteIp(session);
+        
+        lgnWLock.lock();
+        try {
+            return transitioningChars.remove(remoteIp);
+        } finally {
+            lgnWLock.unlock();
+        }
+    }
+    
+    public boolean hasCharacteridInTransition(IoSession session) {
+        if (!ServerConstants.USE_IP_VALIDATION) {
+            return true;
+        }
+        
+        String remoteIp = getRemoteIp(session);
+        
+        lgnRLock.lock();
+        try {
+            return transitioningChars.containsKey(remoteIp);
+        } finally {
+            lgnRLock.unlock();
         }
     }
     
@@ -1588,9 +1703,10 @@ public class Server {
     }
     
     private void disconnectIdlesOnLoginState() {
+        List<MapleClient> toDisconnect = new LinkedList<>();
+        
         srvLock.lock();
         try {
-            List<MapleClient> toDisconnect = new LinkedList<>();
             long timeNow = System.currentTimeMillis();
             
             for(Entry<MapleClient, Long> mc : inLoginState.entrySet()) {
@@ -1600,16 +1716,18 @@ public class Server {
             }
             
             for(MapleClient c : toDisconnect) {
-                if(c.isLoggedIn()) {
-                    c.disconnect(false, false);
-                } else {
-                    c.getSession().close(true);
-                }
-                
                 inLoginState.remove(c);
             }
         } finally {
             srvLock.unlock();
+        }
+        
+        for (MapleClient c : toDisconnect) {    // thanks Lei for pointing a deadlock issue with srvLock
+            if(c.isLoggedIn()) {
+                c.disconnect(false, false);
+            } else {
+                MapleSessionCoordinator.getInstance().closeSession(c.getSession(), true);
+            }
         }
     }
     
@@ -1626,74 +1744,78 @@ public class Server {
         return new Runnable() {
             @Override
             public void run() {
-                srvLock.lock();
-                
-                try {
-                    System.out.println((restart ? "Restarting" : "Shutting down") + " the server!\r\n");
-                    if (getWorlds() == null) return;//already shutdown
-                    for (World w : getWorlds()) {
-                        w.shutdown();
-                    }
-                    
-                    /*for (World w : getWorlds()) {
-                        while (w.getPlayerStorage().getAllCharacters().size() > 0) {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException ie) {
-                                System.err.println("FUCK MY LIFE");
-                            }
-                        }
-                    }
-                    for (Channel ch : getAllChannels()) {
-                        while (ch.getConnectedClients() > 0) {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException ie) {
-                                System.err.println("FUCK MY LIFE");
-                            }
-                        }
-                    }*/
-                    
-                    List<Channel> allChannels = getAllChannels();
-                    
-                    if(ServerConstants.USE_THREAD_TRACKER) ThreadTracker.getInstance().cancelThreadTrackerTask();
-                    
-                    for (Channel ch : allChannels) {
-                        while (!ch.finishedShutdown()) {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException ie) {
-                                ie.printStackTrace();
-                                System.err.println("FUCK MY LIFE");
-                            }
-                        }
-                    }
-                    
-                    resetServerWorlds();
-                    
-                    TimerManager.getInstance().purge();
-                    TimerManager.getInstance().stop();
-
-                    System.out.println("Worlds + Channels are offline.");
-                    acceptor.unbind();
-                    acceptor = null;
-                    if (!restart) {
-                        System.exit(0);
-                    } else {
-                        System.out.println("\r\nRestarting the server....\r\n");
-                        try {
-                            instance.finalize();//FUU I CAN AND IT'S FREE
-                        } catch (Throwable ex) {
-                            ex.printStackTrace();
-                        }
-                        instance = null;
-                        System.gc();
-                        getInstance().init();//DID I DO EVERYTHING?! D:
-                    }
-                } finally {
-                    srvLock.unlock();
-                }
+                shutdownInternal(restart);
             }
         };
+    }
+    
+    private synchronized void shutdownInternal(boolean restart) {
+        System.out.println((restart ? "Restarting" : "Shutting down") + " the server!\r\n");
+        if (getWorlds() == null) return;//already shutdown
+        for (World w : getWorlds()) {
+            w.shutdown();
+        }
+
+        /*for (World w : getWorlds()) {
+            while (w.getPlayerStorage().getAllCharacters().size() > 0) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    System.err.println("FUCK MY LIFE");
+                }
+            }
+        }
+        for (Channel ch : getAllChannels()) {
+            while (ch.getConnectedClients() > 0) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    System.err.println("FUCK MY LIFE");
+                }
+            }
+        }*/
+
+        List<Channel> allChannels = getAllChannels();
+
+        if(ServerConstants.USE_THREAD_TRACKER) ThreadTracker.getInstance().cancelThreadTrackerTask();
+
+        for (Channel ch : allChannels) {
+            while (!ch.finishedShutdown()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    ie.printStackTrace();
+                    System.err.println("FUCK MY LIFE");
+                }
+            }
+        }
+
+        resetServerWorlds();
+
+        ThreadManager.getInstance().stop();
+        TimerManager.getInstance().purge();
+        TimerManager.getInstance().stop();
+
+        System.out.println("Worlds + Channels are offline.");
+        acceptor.unbind();
+        acceptor = null;
+        if (!restart) {  // shutdown hook deadlocks if System.exit() method is used within its body chores, thanks MIKE for pointing that out
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    System.exit(0);
+                }
+            }).start();
+        } else {
+            System.out.println("\r\nRestarting the server....\r\n");
+            try {
+                instance.finalize();//FUU I CAN AND IT'S FREE
+            } catch (Throwable ex) {
+                ex.printStackTrace();
+            }
+            instance = null;
+            System.gc();
+            getInstance().init();//DID I DO EVERYTHING?! D:
+        }
     }
 }

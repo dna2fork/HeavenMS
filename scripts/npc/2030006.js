@@ -32,14 +32,14 @@ var questionTree = [
         //Questions Related to ITEMS
         ["Which of following monsters got CORRECT item corresponding to the monster?", ["Royal cactus - Needle", "Wild Boar - Boar fang", "Lazy Buffy - Buffy hat", "Chipmunk - Nut", "Stirge - Stirge's wing"], 4],
         ["Which of following monsters got WRONG item corresponding to the monster?", ["Greatest Oldies - Greatest oldies", "Nependeath - Nependeath's leaf", "Ghost stump - Seedling", "Sparker - Seal tooth", "Miner Zombie - Zombie's lost tooth"], 1],
-        ["In GM Event, how many FRUIT CAKE you can get as reward?", ["20", "200", "5", "25", "100"], 2],
+        //["In GM Event, how many FRUIT CAKE you can get as reward?", ["20", "200", "5", "25", "100"], 2],
         ["Which of following potions got CORRECT info.?", ["Warrior Elixir - Attack +5 for 3 minutes", "Pure Water - Recover 700 MP", "Cake - Recover 150 HP & MP", "Salad - Recover 300 MP", "Pizza - Recover 400 HP"], 4],
         ["Which of following potions got WRONG info.?", ["Mana Elixir - Recover 300 MP", "Tonic - Cures state of weakness", "Apple - Recover 30 HP", "Sunrise Dew - Recover 3000 MP", "Ramen - Recover 1000 HP"], 3],
 
         //Questions Related to MONSTERS
         ["Green Mushroom, Tree Stump, Bubbling, Axe Stump, Octopus, which is highest level of all?", ["Tree Stump", "Bubbling", "Axe Stump", "Octopus", "Green Mushroom"], 2],
         ["Which monster will be seen during the ship trip to Orbis/Ellinia?", ["Werewolf", "Slime", "Crimson Balrog", "Zakum", "Star Pixie"], 2],
-        ["Maple Island doesn't have which following monsters?", ["Shroom", "Blue Snail", "Orange Mushroom", "Red Snail", "Pig"], 4],
+        ["Maple Island doesn't have which following monsters?", ["Shroom", "Blue Snail", "Slime", "Red Snail", "Pig"], 4],    // to get conformant with website answers, thanks to Vcoc
         ["Which monster is not at Victoria Island and Sleepywood?", ["Evil Eye", "Sentinel", "Jr. Balrog", "Ghost Stump", "Snail"], 1],
         ["El Nath doesn't have which following monsters?", ["Dark Yeti", "Dark Ligator", "Yeti & Pepe", "Bain", "Coolie Zombie"], 1],
         ["Which of following monsters can fly?", ["Malady", "Ligator", "Cold Eye", "Meerkat", "Alishar"], 0],
@@ -79,6 +79,8 @@ var question;
 
 var questionPool;
 var questionPoolCursor;
+
+var questionAnswer;
 
 function start() {
     status = -1;
@@ -121,7 +123,10 @@ function action(mode, type, selection) {
             question = fetchNextQuestion();
             var questionHead = generateQuestionHeading();
             var questionEntry = questionTree[question][0];
-            var questionOptions = generateSelectionMenu(questionTree[question][1]);
+            
+            var questionData = generateSelectionMenu(questionTree[question][1], questionTree[question][2]);
+            var questionOptions = questionData[0];
+            questionAnswer = questionData[1];
             
             cm.sendSimple(questionHead + questionEntry + "\r\n\r\n#b" + questionOptions + "#k");
         } else if(status >= 2 && status <= 5) {
@@ -134,7 +139,10 @@ function action(mode, type, selection) {
             question = fetchNextQuestion();
             var questionHead = generateQuestionHeading();
             var questionEntry = questionTree[question][0];
-            var questionOptions = generateSelectionMenu(questionTree[question][1]);
+            
+            var questionData = generateSelectionMenu(questionTree[question][1], questionTree[question][2]);
+            var questionOptions = questionData[0];
+            questionAnswer = questionData[1];
             
             cm.sendSimple(questionHead + questionEntry + "\r\n\r\n#b" + questionOptions + "#k");
         } else if(status == 6) {
@@ -155,7 +163,7 @@ function action(mode, type, selection) {
 }
 
 function evaluateAnswer(selection) {
-    return selection == questionTree[question][2];
+    return selection == questionAnswer;
 }
 
 function generateQuestionHeading() {
@@ -189,10 +197,36 @@ function fetchNextQuestion() {
     return next;
 }
 
-function generateSelectionMenu(array) {
+function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
+
+        // Pick a remaining element...
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex -= 1;
+
+        // And swap it with the current element.
+        temporaryValue = array[currentIndex];
+        array[currentIndex] = array[randomIndex];
+        array[randomIndex] = temporaryValue;
+    }
+
+    return array;
+}
+
+function generateSelectionMenu(array, answer) {
+    var answerStr = array[answer], answerPos = -1;
+    
+    shuffle(array);
+    
     var menu = "";
     for (var i = 0; i < array.length; i++) {
         menu += "#L" + i + "#" + array[i] + "#l\r\n";
+        if (answerStr == array[i]) {
+            answerPos = i;
+        }
     }
-    return menu;
+    return [menu, answerPos];
 }

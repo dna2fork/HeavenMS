@@ -21,14 +21,16 @@
  */
 package net.server.channel.handlers;
 
+import net.AbstractMaplePacketHandler;
 import client.MapleCharacter;
 import client.MapleClient;
+import client.inventory.MapleInventory;
 import client.inventory.MapleInventoryType;
 import client.inventory.MaplePet;
 import client.autoban.AutobanManager;
 import client.inventory.Item;
-import net.AbstractMaplePacketHandler;
 import client.inventory.manipulator.MapleInventoryManipulator;
+import net.server.Server;
 import tools.MaplePacketCreator;
 import tools.data.input.SeekableLittleEndianAccessor;
 
@@ -43,7 +45,8 @@ public final class PetFoodHandler extends AbstractMaplePacketHandler {
             return;
         }
         abm.spam(2);
-        abm.setTimestamp(1, slea.readInt(), 3);
+        slea.readInt(); // timestamp issue detected thanks to Masterrulax
+        abm.setTimestamp(1, Server.getInstance().getCurrentTimestamp(), 3);
         if (chr.getNoPets() == 0) {
             c.announce(MaplePacketCreator.enableActions());
             return;
@@ -65,18 +68,25 @@ public final class PetFoodHandler extends AbstractMaplePacketHandler {
         
         short pos = slea.readShort();
         int itemId = slea.readInt();
-        Item use = chr.getInventory(MapleInventoryType.USE).getItem(pos);
-        if (use == null || (itemId / 10000) != 212 || use.getItemId() != itemId) {
-            return;
-        }
         
-        c.lockClient();
-        try {
-            pet.gainClosenessFullness(chr, (pet.getFullness() <= 75) ? 1 : 0, 30, 1);   // 25+ "emptyness" to get +1 closeness
-        } finally {
-            c.unlockClient();
+        if (c.tryacquireClient()) {
+            try {
+                MapleInventory useInv = chr.getInventory(MapleInventoryType.USE);
+                useInv.lockInventory();
+                try {
+                    Item use = useInv.getItem(pos);
+                    if (use == null || (itemId / 10000) != 212 || use.getItemId() != itemId || use.getQuantity() < 1) {
+                        return;
+                    }
+
+                    pet.gainClosenessFullness(chr, (pet.getFullness() <= 75) ? 1 : 0, 30, 1);   // 25+ "emptyness" to get +1 closeness
+                    MapleInventoryManipulator.removeFromSlot(c, MapleInventoryType.USE, pos, (short) 1, false);
+                } finally {
+                    useInv.unlockInventory();
+                }
+            } finally {
+                c.releaseClient();
+            }
         }
-        
-        MapleInventoryManipulator.removeFromSlot(c, MapleInventoryType.USE, pos, (short) 1, false);
     }
 }

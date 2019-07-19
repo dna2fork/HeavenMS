@@ -29,11 +29,16 @@ import java.util.LinkedList;
 import java.util.List;
 
 import client.MapleCharacter;
+import client.MapleClient;
 import net.server.Server;
+import net.server.coordinator.MapleInviteCoordinator;
+import net.server.coordinator.MapleInviteCoordinator.InviteResult;
+import net.server.coordinator.MapleInviteCoordinator.InviteType;
 import net.server.world.MapleParty;
 import net.server.world.MaplePartyCharacter;
 import tools.DatabaseConnection;
 import tools.MaplePacketCreator;
+import tools.Pair;
 
 /**
  *
@@ -52,7 +57,7 @@ public class MapleAlliance {
     public MapleAlliance(String name, int id) {
         this.name = name;
         allianceId = id;
-        String[] ranks = {"Master", "Jr.Master", "Member", "Member", "Member"};
+        String[] ranks = {"Master", "Jr. Master", "Member", "Member", "Member"};
         for (int i = 0; i < 5; i++) {
             rankTitles[i] = ranks[i];
         }
@@ -130,7 +135,9 @@ public class MapleAlliance {
 
                 Server.getInstance().addAlliance(id, alliance);
                 
-                Server.getInstance().allianceMessage(id, MaplePacketCreator.updateAllianceInfo(alliance, guildMasters.get(0).getClient()), -1, -1);
+                int worldid = guildMasters.get(0).getWorld();
+                Server.getInstance().allianceMessage(id, MaplePacketCreator.updateAllianceInfo(alliance, worldid), -1, -1);
+                Server.getInstance().allianceMessage(id, MaplePacketCreator.getGuildAlliances(alliance, worldid), -1, -1);  // thanks Vcoc for noticing guilds from other alliances being visually stacked here due to this not being updated
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -297,22 +304,57 @@ public class MapleAlliance {
         }
     }
     
-    public static void removeGuildFromAlliance(int allianceId, int guildId, int worldId) {
-        MapleAlliance alliance = Server.getInstance().getAlliance(allianceId);
-                
-        Server.getInstance().allianceMessage(alliance.getId(), MaplePacketCreator.removeGuildFromAlliance(alliance, guildId, worldId), -1, -1);
-        Server.getInstance().removeGuildFromAlliance(alliance.getId(), guildId);
-
-        Server.getInstance().allianceMessage(alliance.getId(), MaplePacketCreator.getGuildAlliances(alliance, worldId), -1, -1);
-        Server.getInstance().allianceMessage(alliance.getId(), MaplePacketCreator.allianceNotice(alliance.getId(), alliance.getNotice()), -1, -1);
-        Server.getInstance().guildMessage(guildId, MaplePacketCreator.disbandAlliance(alliance.getId()));
-
-        alliance.dropMessage("[" + Server.getInstance().getGuild(guildId, worldId).getName() + "] guild has left the union.");
+    private static void removeGuildFromAllianceOnDb(int guildId) {
+        PreparedStatement ps = null;
+        Connection con = null;
+        try {
+            con = DatabaseConnection.getConnection();
+            
+            ps = con.prepareStatement("DELETE FROM `allianceguilds` WHERE guildid = ?");
+            ps.setInt(1, guildId);
+            ps.executeUpdate();
+            ps.close();
+            
+            con.close();
+        } catch (SQLException sqle) {
+            sqle.printStackTrace();
+        } finally {
+            try {
+                if (ps != null && !ps.isClosed()) {
+                    ps.close();
+                }
+                if (con != null && !con.isClosed()) {
+                    con.close();
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+    
+    public static boolean removeGuildFromAlliance(int allianceId, int guildId, int worldId) {
+        Server srv = Server.getInstance();
+        MapleAlliance alliance = srv.getAlliance(allianceId);
+    
+        if (alliance.getLeader().getGuildId() == guildId) {
+            return false;
+        }
+        
+        srv.allianceMessage(alliance.getId(), MaplePacketCreator.removeGuildFromAlliance(alliance, guildId, worldId), -1, -1);
+        srv.removeGuildFromAlliance(alliance.getId(), guildId);
+        removeGuildFromAllianceOnDb(guildId);
+        
+        srv.allianceMessage(alliance.getId(), MaplePacketCreator.getGuildAlliances(alliance, worldId), -1, -1);
+        srv.allianceMessage(alliance.getId(), MaplePacketCreator.allianceNotice(alliance.getId(), alliance.getNotice()), -1, -1);
+        srv.guildMessage(guildId, MaplePacketCreator.disbandAlliance(alliance.getId()));
+        
+        alliance.dropMessage("[" + srv.getGuild(guildId, worldId).getName() + "] guild has left the union.");
+        return true;
     }
     
     public void updateAlliancePackets(MapleCharacter chr) {
         if (allianceId > 0) {
-            this.broadcastMessage(MaplePacketCreator.updateAllianceInfo(this, chr.getClient()));
+            this.broadcastMessage(MaplePacketCreator.updateAllianceInfo(this, chr.getWorld()));
             this.broadcastMessage(MaplePacketCreator.allianceNotice(this.getId(), this.getNotice()));
         }
     }
@@ -427,5 +469,51 @@ public class MapleAlliance {
     
     public void broadcastMessage(byte[] packet) {
         Server.getInstance().allianceMessage(allianceId, packet, -1, -1);
+    }
+    
+    public static void sendInvitation(MapleClient c, String targetGuildName, int allianceId) {
+        MapleGuild mg = Server.getInstance().getGuildByName(targetGuildName);
+        if(mg == null) {
+            c.getPlayer().dropMessage(5, "The entered guild does not exist.");
+        } else {
+            if (mg.getAllianceId() > 0) {
+                c.getPlayer().dropMessage(5, "The entered guild is already registered on a guild alliance.");
+            } else {
+                MapleCharacter victim = mg.getMGC(mg.getLeaderId()).getCharacter();
+                if (victim == null) {
+                    c.getPlayer().dropMessage(5, "The master of the guild that you offered an invitation is currently not online.");
+                } else {
+                    if (MapleInviteCoordinator.createInvite(InviteType.ALLIANCE, c.getPlayer(), allianceId, victim.getId())) {
+                        victim.getClient().announce(MaplePacketCreator.allianceInvite(allianceId, c.getPlayer()));
+                    } else {
+                        c.getPlayer().dropMessage(5, "The master of the guild that you offered an invitation is currently managing another invite.");
+                    }
+                }
+            }
+        }
+    }
+    
+    public static boolean answerInvitation(int targetId, String targetGuildName, int allianceId, boolean answer) {
+        Pair<InviteResult, MapleCharacter> res = MapleInviteCoordinator.answerInvite(InviteType.ALLIANCE, targetId, allianceId, answer);
+        
+        String msg;
+        MapleCharacter sender = res.getRight();
+        switch (res.getLeft()) {
+            case ACCEPTED:
+                return true;
+                
+            case DENIED:
+                msg = "[" + targetGuildName + "] guild has denied your guild alliance invitation.";
+                break;
+                
+            default:
+                msg = "The guild alliance request has not been accepted, since the invitation expired.";
+        }
+        
+        if (sender != null) {
+            sender.dropMessage(5, msg);
+        }
+        
+        return false;
     }
 }

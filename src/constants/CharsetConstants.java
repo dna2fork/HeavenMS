@@ -7,7 +7,7 @@
 package constants;
  
 /*
- * Courtesy of GabrielSin (gabrielsin@playellin.net)
+ * Thanks to GabrielSin (EllinMS) - gabrielsin@playellin.net
  * Ellin
  * MapleStory Server
  * CharsetConstants
@@ -15,7 +15,7 @@ package constants;
  
 public class CharsetConstants {
    
-    public static MapleLanguageType MAPLE_TYPE = MapleLanguageType.LANGUAGE_PT_BR;
+    public static MapleLanguageType MAPLE_TYPE = MapleLanguageType.LANGUAGE_US;
    
     public enum MapleLanguageType {
         LANGUAGE_PT_BR(1, "ISO-8859-1"),

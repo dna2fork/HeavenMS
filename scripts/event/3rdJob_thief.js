@@ -41,13 +41,21 @@ function init() {
     em.setProperty("noEntry","false");
 }
 
+function setup(level, lobbyid) {
+    var eim = em.newInstance("3rdJob_thief_" + lobbyid);
+    eim.setProperty("level", level);
+    eim.setProperty("boss", "0");
+    
+    return eim;
+}
+
 function playerEntry(eim, player) {
     eim.getInstanceMap(maxMapId).resetPQ(1);
     
     player.changeMap(entryMap, 0);
     em.setProperty("noEntry","true");
     
-    player.getClient().getSession().write(MaplePacketCreator.getClock(eventTime * 60));
+    player.getClient().announce(MaplePacketCreator.getClock(eventTime * 60));
     eim.startEventTimer(eventTime * 60000);
 }
 
@@ -93,3 +101,17 @@ function allMonstersDead(eim) {}
 function cancelSchedule() {}
 
 function dispose() {}
+
+
+// ---------- FILLER FUNCTIONS ----------
+
+function disbandParty(eim, player) {}
+
+function afterSetup(eim) {}
+
+function changedLeader(eim, leader) {}
+
+function leftParty(eim, player) {}
+
+function clearPQ(eim) {}
+

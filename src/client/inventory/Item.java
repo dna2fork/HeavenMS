@@ -26,10 +26,12 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import client.inventory.manipulator.MapleKarmaManipulator;
+import server.MapleItemInformationProvider;
 
 public class Item implements Comparable<Item> {
 
-    private static AtomicInteger runningCashId = new AtomicInteger(0);
+    private static AtomicInteger runningCashId = new AtomicInteger(777000000);  // pets & rings shares cashid values
     
     private int id, cashId, sn;
     private short position;
@@ -38,7 +40,7 @@ public class Item implements Comparable<Item> {
     private MaplePet pet = null;
     private String owner = "";
     protected List<String> log;
-    private byte flag;
+    private short flag;
     private long expiration = -1;
     private String giftFrom = "";
 
@@ -54,8 +56,13 @@ public class Item implements Comparable<Item> {
         this.id = id;
         this.position = position;
         this.quantity = quantity;
+        if (petid > -1) {   // issue with null "pet" having petid > -1 found thanks to MedicOP
+            this.pet = MaplePet.loadFromDb(id, position, petid);
+            if (this.pet == null) {
+                petid = -1;
+            }
+        }
         this.petid = petid;
-        if (petid > -1) this.pet = MaplePet.loadFromDb(id, position, petid);
         this.flag = 0;
         this.log = new LinkedList<>();
     }
@@ -71,6 +78,7 @@ public class Item implements Comparable<Item> {
 
     public void setPosition(short position) {
         this.position = position;
+        if (this.pet != null) this.pet.setPosition(position);
     }
 
     public void setQuantity(short quantity) {
@@ -83,7 +91,7 @@ public class Item implements Comparable<Item> {
 
     public int getCashId() {
         if (cashId == 0) {
-            cashId = runningCashId.incrementAndGet();
+            cashId = runningCashId.getAndIncrement();
         }
         return cashId;
     }
@@ -118,10 +126,6 @@ public class Item implements Comparable<Item> {
     public int getPetId() {
         return petid;
     }
-
-    public void setPetId(int id) {
-        this.petid = id;
-    }
  
     @Override
     public int compareTo(Item other) {
@@ -142,11 +146,16 @@ public class Item implements Comparable<Item> {
         return Collections.unmodifiableList(log);
     }
 
-    public byte getFlag() {
+    public short getFlag() {
         return flag;
     }
 
-    public void setFlag(byte b) {
+    public void setFlag(short b) {
+        MapleItemInformationProvider ii = MapleItemInformationProvider.getInstance();
+        if (ii.isAccountRestricted(id)) {
+            b |= ItemConstants.ACCOUNT_SHARING; // thanks Shinigami15 for noticing ACCOUNT_SHARING flag not being applied properly to items server-side
+        }
+        
         this.flag = b;
     }
 
@@ -176,5 +185,9 @@ public class Item implements Comparable<Item> {
 
     public MaplePet getPet() {
         return pet;
+    }
+    
+    public boolean isUntradeable() {
+        return ((this.getFlag() & ItemConstants.UNTRADEABLE) == ItemConstants.UNTRADEABLE) || (MapleItemInformationProvider.getInstance().isDropRestricted(this.getItemId()) && !MapleKarmaManipulator.hasKarmaFlag(this));
     }
 }

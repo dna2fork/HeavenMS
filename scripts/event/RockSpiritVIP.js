@@ -21,21 +21,28 @@
 
 importPackage(Packages.tools);
 
+var entryMap;
 var exitMap;
-var startMap;
 var otherMap;
+
+var minMapId = 103040410;
+var maxMapId = 103040460;
+
 var minPlayers = 1;
 var fightTime = 30;
 var timer = 1000 * 60 * fightTime;
 
 function init() {
 	exitMap = em.getChannelServer().getMapFactory().getMap(103040400);
-	startMap = em.getChannelServer().getMapFactory().getMap(103040440);
+	entryMap = em.getChannelServer().getMapFactory().getMap(103040440);
 	otherMap = em.getChannelServer().getMapFactory().getMap(103040450);
 }
 
-function setup() {
-    var eim = em.newInstance("RockSpiritVIP_" + em.getProperty("player"));
+function setup(level, lobbyid) {
+    var eim = em.newInstance("RockSpiritVIP_" + lobbyid);
+    eim.setProperty("level", level);
+    eim.setProperty("boss", "0");
+    
     respawn(eim);
     eim.startEventTimer(timer);    
 	return eim;
@@ -44,7 +51,7 @@ function setup() {
 function afterSetup(eim) {}
 
 function respawn(eim) {
-	var map = eim.getMapInstance(startMap.getId());
+	var map = eim.getMapInstance(entryMap.getId());
 	var map2 = eim.getMapInstance(otherMap.getId());
 	map.allowSummonState(true);
 	map2.allowSummonState(true);
@@ -55,47 +62,51 @@ function respawn(eim) {
 
 
 function playerEntry(eim, player) {
-	var amplifierMap = eim.getMapInstance(startMap.getId());
+	var amplifierMap = eim.getMapInstance(entryMap.getId());
 	player.changeMap(amplifierMap);
-    eim.schedule("timeOut", timer);
+        eim.schedule("timeOut", timer);
 }
 
 function playerRevive(eim, player) {
-    player.setHp(50);
-    player.setStance(0);
-    eim.unregisterPlayer(player);
-    player.changeMap(exitMap);
+    player.respawn(eim, exitMap);
     return false;
 }
 
 function playerDead(eim, player) {}
 
 function playerDisconnected(eim, player) {
-    var party = eim.getPlayers();
-	for (var i = 0; i < party.size(); i++) {
-	    if (party.get(i).equals(player)) {
-	        removePlayer(eim, player);
-	    } else {
-	        playerExit(eim, party.get(i));
-	    }
-	}
-	eim.dispose();
+    if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+        eim.unregisterPlayer(player);
+        end(eim);
+    }
+    else
+        eim.unregisterPlayer(player);    
+}
+
+function changedMap(eim, player, mapid) {
+    if (mapid < minMapId || mapid > maxMapId) {
+        if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+            eim.unregisterPlayer(player);
+            end(eim);
+        }
+        else
+            eim.unregisterPlayer(player);
+    }
 }
 
 function monsterValue(eim,mobId) { 
     return -1;
 }
 
-function leftParty(eim, player) {
+function end(eim) {
     var party = eim.getPlayers();
-    if (party.size() < minPlayers) {
-        for (var i = 0; i < party.size(); i++)
-            playerExit(eim,party.get(i));
-        eim.dispose();
+    for (var i = 0; i < party.size(); i++) {
+        playerExit(eim, party.get(i));
     }
-    else
-        playerExit(eim, player);
+    eim.dispose();
 }
+
+function leftParty(eim, player) {}
 
 function disbandParty(eim) {}
 
@@ -104,21 +115,6 @@ function playerUnregistered(eim, player) {}
 function playerExit(eim, player) {
     eim.unregisterPlayer(player);
     player.changeMap(exitMap, exitMap.getPortal(0));
-}
-
-
-function moveMap(eim, player) {
-	if (player.getMap().getId() == exitMap.getId()) {
-		removePlayer(eim, player);
-		player.getClient().getSession().write(MaplePacketCreator.removeClock());
-		eim.dispose();
-	}
-}
-
-function removePlayer(eim, player) {
-    eim.unregisterPlayer(player);
-    player.getMap().removePlayer(player);
-    player.setMap(exitMap);
 }
 
 function cancelSchedule() {}
@@ -132,14 +128,12 @@ function monsterKilled(mob, eim) {}
 function allMonstersDead(eim) {}
 
 function timeOut(eim) {
-    if (eim != null) {
-        if (eim.getPlayerCount() > 0) {
-            var pIter = eim.getPlayers().iterator();
-            while (pIter.hasNext()){
-				var player = pIter.next();
-                playerExit(eim, player);
-			}
-        }
-        eim.dispose();
-    }
+    end(eim);
 }
+
+// ---------- FILLER FUNCTIONS ----------
+
+function scheduledTimeout(eim) {}
+
+function changedLeader(eim, leader) {}
+

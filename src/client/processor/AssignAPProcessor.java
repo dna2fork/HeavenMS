@@ -43,14 +43,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import server.ThreadManager;
 import tools.MaplePacketCreator;
-import tools.Pair;
 import tools.Randomizer;
 import tools.data.input.SeekableLittleEndianAccessor;
 
 /**
  *
- * @author RonanLana (synchronization of AP transaction modules)
+ * @author RonanLana - synchronization of AP transaction modules
  */
 public class AssignAPProcessor {
     
@@ -63,9 +63,10 @@ public class AssignAPProcessor {
         c.lockClient();
         try {
             int[] statGain = new int[4];
-            int[] statEqpd = new int[4];
+            int[] statUpdate = new int[4];
             statGain[0] = 0; statGain[1] = 0; statGain[2] = 0; statGain[3] = 0;
 
+            int remainingAp = chr.getRemainingAp();
             slea.skip(8);
 
             if(ServerConstants.USE_SERVER_AUTOASSIGNER) {
@@ -94,11 +95,11 @@ public class AssignAPProcessor {
                     //if(nEquip.getInt() > 0) eqpIntList.add(nEquip.getInt()); //not needed...
                     int_ += nEquip.getInt();
                 }
-
-                statEqpd[0] = str;
-                statEqpd[1] = dex;
-                statEqpd[2] = luk;
-                statEqpd[3] = int_;
+                
+                statUpdate[0] = chr.getStr();
+                statUpdate[1] = chr.getDex();
+                statUpdate[2] = chr.getLuk();
+                statUpdate[3] = chr.getInt();
 
                 Collections.sort(eqpStrList, Collections.reverseOrder());
                 Collections.sort(eqpDexList, Collections.reverseOrder());
@@ -114,7 +115,7 @@ public class AssignAPProcessor {
                 //c.getPlayer().message("SUM EQUIP STATS -> STR: " + str + " DEX: " + dex + " LUK: " + luk + " INT: " + int_);
 
                 MapleJob stance = c.getPlayer().getJobStyle(opt);
-                int prStat = 0, scStat = 0, trStat = 0, temp, tempAp = chr.getRemainingAp(), CAP;
+                int prStat = 0, scStat = 0, trStat = 0, temp, tempAp = remainingAp, CAP;
                 if (tempAp < 1) return;
 
                 MapleStat primary, secondary, tertiary = MapleStat.LUK;
@@ -133,10 +134,10 @@ public class AssignAPProcessor {
                         luk = scStat;
                         str = 0; dex = 0;
 
-                        if(luk + chr.getLuk() > CAP) {
+                        if(ServerConstants.USE_AUTOASSIGN_SECONDARY_CAP && luk + chr.getLuk() > CAP) {
                             temp = luk + chr.getLuk() - CAP;
-                            luk -= temp;
-                            int_ += temp;
+                            scStat -= temp;
+                            prStat += temp;
                         }
 
                         primary = MapleStat.INT;
@@ -159,10 +160,10 @@ public class AssignAPProcessor {
                         str = scStat;
                         int_ = 0; luk = 0;
 
-                        if(str + chr.getStr() > CAP) {
+                        if(ServerConstants.USE_AUTOASSIGN_SECONDARY_CAP && str + chr.getStr() > CAP) {
                             temp = str + chr.getStr() - CAP;
-                            str -= temp;
-                            dex += temp;
+                            scStat -= temp;
+                            prStat += temp;
                         }
 
                         primary = MapleStat.DEX;
@@ -185,10 +186,10 @@ public class AssignAPProcessor {
                         str = scStat;
                         int_ = 0; luk = 0;
 
-                        if(str + chr.getStr() > CAP) {
+                        if(ServerConstants.USE_AUTOASSIGN_SECONDARY_CAP && str + chr.getStr() > CAP) {
                             temp = str + chr.getStr() - CAP;
-                            str -= temp;
-                            dex += temp;
+                            scStat -= temp;
+                            prStat += temp;
                         }
 
                         primary = MapleStat.DEX;
@@ -239,15 +240,15 @@ public class AssignAPProcessor {
                         str = trStat;
                         int_ = 0;
 
-                        if(dex + chr.getDex() > CAP) {
+                        if(ServerConstants.USE_AUTOASSIGN_SECONDARY_CAP && dex + chr.getDex() > CAP) {
                             temp = dex + chr.getDex() - CAP;
-                            dex -= temp;
-                            luk += temp;
+                            scStat -= temp;
+                            prStat += temp;
                         }
-                        if(str + chr.getStr() > CAP) {
+                        if(ServerConstants.USE_AUTOASSIGN_SECONDARY_CAP && str + chr.getStr() > CAP) {
                             temp = str + chr.getStr() - CAP;
-                            str -= temp;
-                            luk += temp;
+                            trStat -= temp;
+                            prStat += temp;
                         }
 
                         primary = MapleStat.LUK;
@@ -257,50 +258,64 @@ public class AssignAPProcessor {
                         break;
 
                     case BRAWLER:
-                        CAP = 120;
-
-                        scStat = chr.getLevel() - (chr.getDex() + dex - eqpDex);
-                        if(scStat < 0) scStat = 0;
-                        scStat = Math.min(scStat, tempAp);
-
-                        if(tempAp > scStat) tempAp -= scStat;
-                        else tempAp = 0;
-
-                        prStat = tempAp;
-                        str = prStat;
-                        dex = scStat;
-                        int_ = 0; luk = 0;
-
-                        if(dex + chr.getDex() > CAP) {
-                            temp = dex + chr.getDex() - CAP;
-                            dex -= temp;
-                            str += temp;
-                        }
-
-                        primary = MapleStat.STR;
-                        secondary = MapleStat.DEX;
-
-                        break;
-
                     default:    //warrior, beginner, ...
-                        CAP = 80;
+                        CAP = 300;
+                        
+                        boolean highDex = false;    // thanks lucasziron & Vcoc for finding out DEX autoassigning poorly for STR-based characters
+                        if (chr.getLevel() < 40) {
+                            if (chr.getDex() >= (2 * chr.getLevel()) + 2) {
+                                highDex = true;
+                            }
+                        } else {
+                            if (chr.getDex() >= chr.getLevel() + 42) {
+                                highDex = true;
+                            }
+                        }
+                        
+                        // other classes will start favoring more DEX only if a level-based threshold is reached.
+                        if(!highDex) {
+                            scStat = 0;
+                            if(chr.getDex() < 80) {
+                                scStat = (2 * chr.getLevel()) - (chr.getDex() + dex - eqpDex);
+                                if(scStat < 0) scStat = 0;
 
-                        scStat = ((2 * chr.getLevel()) / 3) - (chr.getDex() + dex - eqpDex);
-                        if(scStat < 0) scStat = 0;
-                        scStat = Math.min(scStat, tempAp);
+                                scStat = Math.min(80 - chr.getDex(), scStat);
+                                scStat = Math.min(tempAp, scStat);
+                                tempAp -= scStat;
+                            }
 
-                        if(tempAp > scStat) tempAp -= scStat;
-                        else tempAp = 0;
+                            temp = (chr.getLevel() + 40) - Math.max(80, scStat + chr.getDex() + dex - eqpDex);
+                            if(temp < 0) temp = 0;
+                            temp = Math.min(tempAp, temp);
+                            scStat += temp;
+                            tempAp -= temp;
+                        } else {
+                            scStat = 0;
+                            if(chr.getDex() < 96) {
+                                scStat = (int)(2.4 * chr.getLevel()) - (chr.getDex() + dex - eqpDex);
+                                if(scStat < 0) scStat = 0;
 
+                                scStat = Math.min(96 - chr.getDex(), scStat);
+                                scStat = Math.min(tempAp, scStat);
+                                tempAp -= scStat;
+                            }
+
+                            temp = 96 + (int)(1.2 * (chr.getLevel() - 40)) - Math.max(96, scStat + chr.getDex() + dex - eqpDex);
+                            if(temp < 0) temp = 0;
+                            temp = Math.min(tempAp, temp);
+                            scStat += temp;
+                            tempAp -= temp;
+                        }
+                        
                         prStat = tempAp;
                         str = prStat;
                         dex = scStat;
                         int_ = 0; luk = 0;
 
-                        if(dex + chr.getDex() > CAP) {
+                        if(ServerConstants.USE_AUTOASSIGN_SECONDARY_CAP && dex + chr.getDex() > CAP) {
                             temp = dex + chr.getDex() - CAP;
-                            dex -= temp;
-                            str += temp;
+                            scStat -= temp;
+                            prStat += temp;
                         }
 
                         primary = MapleStat.STR;
@@ -311,20 +326,18 @@ public class AssignAPProcessor {
 
                 int extras = 0;
 
-                extras = gainStatByType(chr, primary, statGain, prStat + extras);
-                extras = gainStatByType(chr, secondary, statGain, scStat + extras);
-                extras = gainStatByType(chr, tertiary, statGain, trStat + extras);
+                extras = gainStatByType(primary, statGain, prStat + extras, statUpdate);
+                extras = gainStatByType(secondary, statGain, scStat + extras, statUpdate);
+                extras = gainStatByType(tertiary, statGain, trStat + extras, statUpdate);
 
                 if(extras > 0) {    //redistribute surplus in priority order
-                    extras = gainStatByType(chr, primary, statGain, extras);
-                    extras = gainStatByType(chr, secondary, statGain, extras);
-                    extras = gainStatByType(chr, tertiary, statGain, extras);
-                    gainStatByType(chr, getQuaternaryStat(stance), statGain, extras);
+                    extras = gainStatByType(primary, statGain, extras, statUpdate);
+                    extras = gainStatByType(secondary, statGain, extras, statUpdate);
+                    extras = gainStatByType(tertiary, statGain, extras, statUpdate);
+                    gainStatByType(getQuaternaryStat(stance), statGain, extras, statUpdate);
                 }
 
-                int remainingAp = (chr.getRemainingAp() - getAccumulatedStatGain(statGain));
-                chr.setRemainingAp(remainingAp);
-                chr.updateSingleStat(MapleStat.AVAILABLEAP, remainingAp);
+                chr.assignStrDexIntLuk(statGain[0], statGain[1], statGain[3], statGain[2]);
                 c.announce(MaplePacketCreator.enableActions());
 
                 //----------------------------------------------------------------------------------------
@@ -335,40 +348,27 @@ public class AssignAPProcessor {
                     AutobanFactory.PACKET_EDIT.alert(chr, "Didn't send full packet for Auto Assign.");
                     
                     final MapleClient client = c;
-                    Thread t = new Thread(new Runnable() {
+                    ThreadManager.getInstance().newTask(new Runnable() {
                         @Override
                         public void run() {
                             client.disconnect(false, false);
                         }
                     });
-                    t.start();
                     
                     return;
                 }
-
-                for (Item item : equippedC) {   //selecting the biggest AP value of each stat from each equipped item.
-                    Equip nEquip = (Equip)item;
-
-                    statEqpd[0] += nEquip.getStr();
-                    statEqpd[1] += nEquip.getDex();
-                    statEqpd[2] += nEquip.getLuk();
-                    statEqpd[3] += nEquip.getInt();
-                }
-
-                int total = 0;
-                int extras = 0;
+                
                 for (int i = 0; i < 2; i++) {
                     int type = slea.readInt();
                     int tempVal = slea.readInt();
-                    if (tempVal < 0 || tempVal > chr.getRemainingAp()) {
+                    if (tempVal < 0 || tempVal > remainingAp) {
                         return;
                     }
-                    total += tempVal;
-                    extras += gainStatByType(chr, MapleStat.getBy5ByteEncoding(type), statGain, tempVal);
+                    
+                    gainStatByType(MapleStat.getBy5ByteEncoding(type), statGain, tempVal, statUpdate);
                 }
-                int remainingAp = (chr.getRemainingAp() - total) + extras;
-                chr.setRemainingAp(remainingAp);
-                chr.updateSingleStat(MapleStat.AVAILABLEAP, remainingAp);
+                
+                chr.assignStrDexIntLuk(statGain[0], statGain[1], statGain[3], statGain[2]);
                 c.announce(MaplePacketCreator.enableActions());
             }
         } finally {
@@ -380,53 +380,51 @@ public class AssignAPProcessor {
         return(statList.size() <= rank ? 0 : statList.get(rank));
     }
     
-    private static int gainStatByType(MapleCharacter chr, MapleStat type, int[] statGain, int gain) {
+    private static int gainStatByType(MapleStat type, int[] statGain, int gain, int statUpdate[]) {
         if(gain <= 0) return 0;
         
         int newVal = 0;
         if (type.equals(MapleStat.STR)) {
-            newVal = chr.getStr() + gain;
+            newVal = statUpdate[0] + gain;
             if (newVal > ServerConstants.MAX_AP) {
                 statGain[0] += (gain - (newVal - ServerConstants.MAX_AP));
-                chr.setStr(ServerConstants.MAX_AP);
+                statUpdate[0] = ServerConstants.MAX_AP;
             } else {
                 statGain[0] += gain;
-                chr.setStr(newVal);
+                statUpdate[0] = newVal;
             }
         } else if (type.equals(MapleStat.INT)) {
-            newVal = chr.getInt() + gain;
+            newVal = statUpdate[3] + gain;
             if (newVal > ServerConstants.MAX_AP) {
                 statGain[3] += (gain - (newVal - ServerConstants.MAX_AP));
-                chr.setInt(ServerConstants.MAX_AP);
+                statUpdate[3] = ServerConstants.MAX_AP;
             } else {
                 statGain[3] += gain;
-                chr.setInt(newVal);
+                statUpdate[3] = newVal;
             }
         } else if (type.equals(MapleStat.LUK)) {
-            newVal = chr.getLuk() + gain;
+            newVal = statUpdate[2] + gain;
             if (newVal > ServerConstants.MAX_AP) {
                 statGain[2] += (gain - (newVal - ServerConstants.MAX_AP));
-                chr.setLuk(ServerConstants.MAX_AP);
+                statUpdate[2] = ServerConstants.MAX_AP;
             } else {
                 statGain[2] += gain;
-                chr.setLuk(newVal);
+                statUpdate[2] = newVal;
             }
         } else if (type.equals(MapleStat.DEX)) {
-            newVal = chr.getDex() + gain;
+            newVal = statUpdate[1] + gain;
             if (newVal > ServerConstants.MAX_AP) {
                 statGain[1] += (gain - (newVal - ServerConstants.MAX_AP));
-                chr.setDex(ServerConstants.MAX_AP);
+                statUpdate[1] = ServerConstants.MAX_AP;
             } else {
                 statGain[1] += gain;
-                chr.setDex(newVal);
+                statUpdate[1] = newVal;
             }
         }
         
         if (newVal > ServerConstants.MAX_AP) {
-            chr.updateSingleStat(type, ServerConstants.MAX_AP);
             return newVal - ServerConstants.MAX_AP;
         }
-        chr.updateSingleStat(type, newVal);
         return 0;
     }
     
@@ -435,20 +433,9 @@ public class AssignAPProcessor {
         return MapleStat.STR;
     }
     
-    private static int getAccumulatedStatGain(int[] statGain) {
-        int acc = 0;
-        
-        for(byte i = 0; i < statGain.length; i++) {
-            acc += statGain[i];
-        }
-        
-        return acc;
-    }
-    
     public static boolean APResetAction(MapleClient c, int APFrom, int APTo) {
         c.lockClient();
         try {
-            List<Pair<MapleStat, Integer>> statupdate = new ArrayList<>(2);
             MapleCharacter player = c.getPlayer();
 
             switch (APFrom) {
@@ -458,7 +445,11 @@ public class AssignAPProcessor {
                         c.announce(MaplePacketCreator.enableActions());
                         return false;
                     }
-                    player.addStat(1, -1);
+                    if (!player.assignStr(-1)) {
+                        player.message("Couldn't execute AP reset operation.");
+                        c.announce(MaplePacketCreator.enableActions());
+                        return false;
+                    }
                     break;
                 case 128: // dex
                     if (player.getDex() < 5) {
@@ -466,7 +457,11 @@ public class AssignAPProcessor {
                         c.announce(MaplePacketCreator.enableActions());
                         return false;
                     }
-                    player.addStat(2, -1);
+                    if (!player.assignDex(-1)) {
+                        player.message("Couldn't execute AP reset operation.");
+                        c.announce(MaplePacketCreator.enableActions());
+                        return false;
+                    }
                     break;
                 case 256: // int
                     if (player.getInt() < 5) {
@@ -474,7 +469,11 @@ public class AssignAPProcessor {
                         c.announce(MaplePacketCreator.enableActions());
                         return false;
                     }
-                    player.addStat(3, -1);
+                    if (!player.assignInt(-1)) {
+                        player.message("Couldn't execute AP reset operation.");
+                        c.announce(MaplePacketCreator.enableActions());
+                        return false;
+                    }
                     break;
                 case 512: // luk
                     if (player.getLuk() < 5) {
@@ -482,7 +481,11 @@ public class AssignAPProcessor {
                         c.announce(MaplePacketCreator.enableActions());
                         return false;
                     }
-                    player.addStat(4, -1);
+                    if (!player.assignLuk(-1)) {
+                        player.message("Couldn't execute AP reset operation.");
+                        c.announce(MaplePacketCreator.enableActions());
+                        return false;
+                    }
                     break;
                 case 2048: // HP
                     if(ServerConstants.USE_ENFORCE_HPMP_SWAP) {
@@ -492,6 +495,7 @@ public class AssignAPProcessor {
                             return false;
                         }
                     }
+                    
                     if (player.getHpMpApUsed() < 1) {
                         player.message("You don't have enough HPMP stat points to spend on AP Reset.");
                         c.announce(MaplePacketCreator.enableActions());
@@ -500,27 +504,19 @@ public class AssignAPProcessor {
 
                     int hp = player.getMaxHp();
                     int level_ = player.getLevel();
-
-                    boolean canWash_ = true;
                     if (hp < level_ * 14 + 148) {
-                        canWash_ = false;
-                    }
-
-                    if (!canWash_) {
                         player.message("You don't have the minimum HP pool required to swap.");
                         c.announce(MaplePacketCreator.enableActions());
                         return false;
                     }
-
-                    player.setHpMpApUsed(player.getHpMpApUsed() - 1);
+                    
+                    int curHp = player.getHp();
                     int hplose = -takeHp(player.getJob());
-                    int nextHp = Math.max(1, player.getHp() + hplose), nextMaxHp = Math.max(50, player.getMaxHp() + hplose);
-
-                    player.setHp(nextHp);
-                    player.setMaxHp(nextMaxHp);
-                    statupdate.add(new Pair<>(MapleStat.HP, nextHp));
-                    statupdate.add(new Pair<>(MapleStat.MAXHP, nextMaxHp));
-
+                    player.assignHP(hplose, -1);
+                    if (!ServerConstants.USE_FIXED_RATIO_HPMP_UPDATE) {
+                        player.updateHp(Math.max(1, curHp + hplose));
+                    }
+                    
                     break;
                 case 8192: // MP
                     if(ServerConstants.USE_ENFORCE_HPMP_SWAP) {
@@ -530,6 +526,7 @@ public class AssignAPProcessor {
                             return false;
                         }
                     }
+                    
                     if (player.getHpMpApUsed() < 1) {
                         player.message("You don't have enough HPMP stat points to spend on AP Reset.");
                         c.announce(MaplePacketCreator.enableActions());
@@ -543,7 +540,7 @@ public class AssignAPProcessor {
                     boolean canWash = true;
                     if (job.isA(MapleJob.SPEARMAN) && mp < 4 * level + 156) {
                         canWash = false;
-                    } else if (job.isA(MapleJob.FIGHTER) && mp < 4 * level + 56) {
+                    } else if ((job.isA(MapleJob.FIGHTER) || job.isA(MapleJob.ARAN1)) && mp < 4 * level + 56) {
                         canWash = false;
                     } else if (job.isA(MapleJob.THIEF) && job.getId() % 100 > 0 && mp < level * 14 - 4) {
                         canWash = false;
@@ -556,24 +553,20 @@ public class AssignAPProcessor {
                         c.announce(MaplePacketCreator.enableActions());
                         return false;
                     }
-
-                    player.setHpMpApUsed(player.getHpMpApUsed() - 1);
+                    
+                    int curMp = player.getMp();
                     int mplose = -takeMp(job);
-                    int nextMp = Math.max(0, player.getMp() + mplose), nextMaxMp = Math.max(5, player.getMaxMp() + mplose);
-
-                    player.setMp(nextMp);
-                    player.setMaxMp(nextMaxMp);
-                    statupdate.add(new Pair<>(MapleStat.MP, nextMp));
-                    statupdate.add(new Pair<>(MapleStat.MAXMP, nextMaxMp));
-
+                    player.assignMP(mplose, -1);
+                    if (!ServerConstants.USE_FIXED_RATIO_HPMP_UPDATE) {
+                        player.updateMp(Math.max(0, curMp + mplose));
+                    }
                     break;
                 default:
                     c.announce(MaplePacketCreator.updatePlayerStats(MaplePacketCreator.EMPTY_STATUPDATE, true, player));
                     return false;
             }
 
-            addStat(c, APTo, true);
-            c.announce(MaplePacketCreator.updatePlayerStats(statupdate, true, player));
+            addStat(player, APTo, true);
             return true;
         } finally {
             c.unlockClient();
@@ -583,69 +576,65 @@ public class AssignAPProcessor {
     public static void APAssignAction(MapleClient c, int num) {
         c.lockClient();
         try {
-            if (c.getPlayer().getRemainingAp() > 0) {
-                if (addStat(c, num, false)) {
-                    c.getPlayer().setRemainingAp(c.getPlayer().getRemainingAp() - 1);
-                    c.getPlayer().updateSingleStat(MapleStat.AVAILABLEAP, c.getPlayer().getRemainingAp());
-                }
-            }
-            c.announce(MaplePacketCreator.enableActions());
+            addStat(c.getPlayer(), num, false);
         } finally {
             c.unlockClient();
         }
     }
     
-    private static boolean addStat(MapleClient c, int apTo, boolean usedAPReset) {
+    private static boolean addStat(MapleCharacter chr, int apTo, boolean usedAPReset) {
         switch (apTo) {
-            case 64: // Str
-                if (c.getPlayer().getStr() >= 32767) {
+            case 64:
+                if (!chr.assignStr(1)) {
+                    chr.message("Couldn't execute AP assign operation.");
+                    chr.announce(MaplePacketCreator.enableActions());
                     return false;
                 }
-                c.getPlayer().addStat(1, 1);
                 break;
             case 128: // Dex
-                if (c.getPlayer().getDex() >= 32767) {
+                if (!chr.assignDex(1)) {
+                    chr.message("Couldn't execute AP assign operation.");
+                    chr.announce(MaplePacketCreator.enableActions());
                     return false;
                 }
-                c.getPlayer().addStat(2, 1);
                 break;
             case 256: // Int
-                if (c.getPlayer().getInt() >= 32767) {
+                if (!chr.assignInt(1)) {
+                    chr.message("Couldn't execute AP assign operation.");
+                    chr.announce(MaplePacketCreator.enableActions());
                     return false;
                 }
-                c.getPlayer().addStat(3, 1);
                 break;
             case 512: // Luk
-                if (c.getPlayer().getLuk() >= 32767) {
+                if (!chr.assignLuk(1)) {
+                    chr.message("Couldn't execute AP assign operation.");
+                    chr.announce(MaplePacketCreator.enableActions());
                     return false;
                 }
-                c.getPlayer().addStat(4, 1);
                 break;
-            case 2048: // HP
-                addHP(c.getPlayer(), addHP(c, usedAPReset));
+            case 2048:
+                if (!chr.assignHP(calcHpChange(chr, usedAPReset), 1)) {
+                    chr.message("Couldn't execute AP assign operation.");
+                    chr.announce(MaplePacketCreator.enableActions());
+                    return false;
+                }
                 break;
-            case 8192: // MP
-                addMP(c.getPlayer(), addMP(c, usedAPReset));
+            case 8192:
+                if (!chr.assignMP(calcMpChange(chr, usedAPReset), 1)) {
+                    chr.message("Couldn't execute AP assign operation.");
+                    chr.announce(MaplePacketCreator.enableActions());
+                    return false;
+                }
                 break;
             default:
-                c.announce(MaplePacketCreator.updatePlayerStats(MaplePacketCreator.EMPTY_STATUPDATE, true, c.getPlayer()));
+                chr.announce(MaplePacketCreator.updatePlayerStats(MaplePacketCreator.EMPTY_STATUPDATE, true, chr));
                 return false;
         }
         return true;
     }
 
-    private static int addHP(MapleClient c, boolean usedAPReset) {
-        MapleCharacter player = c.getPlayer();
+    private static int calcHpChange(MapleCharacter player, boolean usedAPReset) {
         MapleJob job = player.getJob();
-        int MaxHP = player.getMaxHp();
-        if (player.getHpMpApUsed() > 9999 || MaxHP >= 30000) {
-            return MaxHP;
-        }
-        
-        return MaxHP + calcHpChange(player, job, usedAPReset);
-    }
-    
-    private static int calcHpChange(MapleCharacter player, MapleJob job, boolean usedAPReset) {
         int MaxHP = 0;
         
         if (job.isA(MapleJob.WARRIOR) || job.isA(MapleJob.DAWNWARRIOR1)) {
@@ -737,18 +726,8 @@ public class AssignAPProcessor {
         return MaxHP;
     }
 
-    private static int addMP(MapleClient c, boolean usedAPReset) {
-        MapleCharacter player = c.getPlayer();
-        int MaxMP = player.getMaxMp();
+    private static int calcMpChange(MapleCharacter player, boolean usedAPReset) {
         MapleJob job = player.getJob();
-        if (player.getHpMpApUsed() > 9999 || player.getMaxMp() >= 30000) {
-            return MaxMP;
-        }
-        
-        return MaxMP + calcMpChange(player, job, usedAPReset);
-    }
-    
-    private static int calcMpChange(MapleCharacter player, MapleJob job, boolean usedAPReset) {
         int MaxMP = 0;
         
         if (job.isA(MapleJob.WARRIOR) || job.isA(MapleJob.DAWNWARRIOR1) || job.isA(MapleJob.ARAN1)) {
@@ -822,20 +801,6 @@ public class AssignAPProcessor {
         }
         
         return MaxMP;
-    }
-
-    private static void addHP(MapleCharacter player, int MaxHP) {
-        MaxHP = Math.min(30000, MaxHP);
-        player.setHpMpApUsed(player.getHpMpApUsed() + 1);
-        player.setMaxHp(MaxHP);
-        player.updateSingleStat(MapleStat.MAXHP, MaxHP);
-    }
-
-    private static void addMP(MapleCharacter player, int MaxMP) {
-        MaxMP = Math.min(30000, MaxMP);
-        player.setHpMpApUsed(player.getHpMpApUsed() + 1);
-        player.setMaxMp(MaxMP);
-        player.updateSingleStat(MapleStat.MAXMP, MaxMP);
     }
     
     private static int takeHp(MapleJob job) {

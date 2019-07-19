@@ -33,8 +33,39 @@ spawnPnpc = false;
 spawnPnpcFee = 7000000;
 jobType = 5;
 
+var advQuest = 0;
 function start() {
-    if (parseInt(cm.getJobId() / 100) == jobType && cm.canSpawnPlayerNpc(Packages.constants.GameConstants.getHallOfFameMapid(cm.getJob()))) {
+    if (cm.isQuestStarted(6330)) {
+        if (cm.getEventInstance() != null) {    // missing script for skill test found thanks to Lost(tm)
+            advQuest = 5;                       // string visibility thanks to iPunchEm & Glvelturall
+            cm.sendNext("Not bad at all. Let's discuss this outside!");
+            cm.setQuestProgress(6330, 0, 1);
+        } else if (cm.getQuestProgress(6330, 0) == 0) {
+            advQuest = 1;
+            cm.sendNext("You're ready, right? Now try to withstand my attacks for 2 minutes. I won't go easy on you. Good luck, because you will need it.");
+        } else {
+            advQuest = 3;
+            cm.teachSkill(5121003, 0, 10, -1);
+            cm.forceCompleteQuest(6330);
+            
+            cm.sendNext("Congratulations. You have managed to pass my test. I'll teach you a new skill called \"Super Transformation\".\r\n\r\n  #s5121003#    #b#q5121003##k");
+        }
+    } else if (cm.isQuestStarted(6370)) {
+        if (cm.getEventInstance() != null) {
+            advQuest = 6;
+            cm.sendNext("Not bad at all. Let's discuss this outside!");
+            cm.setQuestProgress(6370, 0, 1);
+        } else if (cm.getQuestProgress(6370, 0) == 0) {
+            advQuest = 2;
+            cm.sendNext("You're ready, right? Now try to withstand my attacks for 2 minutes. I won't go easy on you. Good luck, because you will need it.");
+        } else {
+            advQuest = 4;
+            cm.teachSkill(5221006, 0, 10, -1);
+            cm.forceCompleteQuest(6370);
+            
+            cm.sendNext("Congratulations. You have managed to pass my test. I'll teach you a new skill called \"Battleship\".\r\n\r\n  #s5221006#    #b#q5221006##k");
+        }
+    } else if (parseInt(cm.getJobId() / 100) == jobType && cm.canSpawnPlayerNpc(Packages.constants.GameConstants.getHallOfFameMapid(cm.getJob()))) {
         spawnPnpc = true;
         
         var sendStr = "You have walked a long way to reach the power, wisdom and courage you hold today, haven't you? What do you say about having right now #ra NPC on the Hall of Fame holding the current image of your character#k? Do you like it?";
@@ -46,12 +77,7 @@ function start() {
     } else {
         if (cm.getJobId() == 0) {
             actionx["1stJob"] = true;
-            if (cm.getLevel() >= 10 && cm.canGetFirstJob(jobType))
-                cm.sendNext("Want to be a pirate? There are some standards to meet. because we can't just accept EVERYONE in... #bYour level should be at least 10#k. Let's see.");
-            else {
-                cm.sendOk("Train a bit more until you reach #blevel 10, " + cm.getFirstJobStatRequirement(jobType) + "#k and I can show you the way of the #rPirate#k.");
-                cm.dispose();
-            }
+            cm.sendNext("Want to be a #rpirate#k? There are some standards to meet. because we can't just accept EVERYONE in... #bYour level should be at least 10, with " + cm.getFirstJobStatRequirement(jobType) + " minimum#k. Let's see.");   // thanks Vcoc for noticing a need to state and check requirements on first job adv starting message
         } else if (cm.getLevel() >= 30 && cm.getJobId() == 500) {
             actionx["2ndJob"] = true;
             if (cm.isQuestCompleted(2191) || cm.isQuestCompleted(2192))
@@ -76,13 +102,35 @@ function start() {
 
 function action(mode, type, selection) {
     status++;
-    if (mode == 0 && type != 1)
+    if (mode == -1 && selection == -1) {
+        cm.dispose();
+        return;
+    } else if (mode == 0 && type != 1) {
         status -= 2;
+    }
+    
     if (status == -1){
         start();
         return;
     } else {
-        if(spawnPnpc) {
+        if (advQuest > 0) {
+            if (advQuest < 3) {
+                var em = cm.getEventManager(advQuest == 1 ? "4jship" : "4jsuper");
+                if(!em.startInstance(cm.getPlayer())) {
+                    cm.sendOk("Someone is already challenging the test. Please try again later.");
+                }
+            } else if (advQuest < 5) {
+                if (advQuest == 3) {
+                    cm.sendOk("It is similar to that of 'Transformation', but it's much more powerful than that. Keep training, and hope to see you around.");
+                } else {
+                    cm.sendOk("Unlike most of the other skills you used as a Pirate, this one definitely is different. You can actually ride the 'Battleship' and attack enemies with it. Your DEF level will increase for the time you're on board, so that'll help you tremendously in combat situations. May you become the best Gunslinger out there...");
+                }
+            } else {
+                cm.warp(120000101);
+            }
+            
+            cm.dispose();
+        } else if(spawnPnpc) {
             if(mode > 0) {
                 if(cm.getMeso() < spawnPnpcFee) {
                     cm.sendOk("Sorry, you don't have enough mesos to purchase your place on the Hall of Fame.");
@@ -113,10 +161,15 @@ function action(mode, type, selection) {
     }
     
     if (actionx["1stJob"]){
-        if (status == 0)
-            cm.sendYesNo("Oh...! You look like someone that can definitely be a part of us... all you need is a little slang, and... yeah... so, what do you think? Wanna be the Pirate?");
-        else if (status == 1){
-            if (cm.canHold(2070000) && cm.canHold(1472061)){
+        if (status == 0) {
+            if (cm.getLevel() >= 10 && cm.canGetFirstJob(jobType)) {
+                cm.sendYesNo("Oh...! You look like someone that can definitely be a part of us... all you need is a little slang, and... yeah... so, what do you think? Wanna be the Pirate?");
+            } else {
+                cm.sendOk("Train a bit more until you reach the base requirements and I can show you the way of the #rPirate#k.");
+                cm.dispose();
+            }
+        } else if (status == 1){
+            if (cm.canHold(2070000) && cm.canHoldAll([1482000, 1492000])){
                 if (cm.getJobId() == 0){
                     cm.changeJobById(500);
                     cm.gainItem(1492000, 1);

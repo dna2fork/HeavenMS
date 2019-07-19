@@ -32,14 +32,9 @@ function start() {
 }
 
 function action(mode, type, selection) {
-        if (mode == -1) {
+        if (mode < 1) {  // disposing issue with stylishs found thanks to Vcoc
                 cm.dispose();
         } else {
-                if (mode == 0 && type > 0) {
-                        cm.dispose();
-                        return;
-                }
-                
                 if (mode == 1)
                         status++;
                 else
@@ -47,7 +42,7 @@ function action(mode, type, selection) {
     
                 
                 if (status == 0) {
-                        cm.sendSimple("Well, hello! Welcome to the Henesys Skin-Care! Would you like to have a firm, tight, healthy looking skin like mine?  With a #b#t5153000##k, you can let us take care of the rest and have the kind of skin you've always wanted~!\r\n#L1#I already have a Coupon!#l");
+                        cm.sendSimple("Well, hello! Welcome to the Henesys Skin-Care! Would you like to have a firm, tight, healthy looking skin like mine?  With a #b#t5153000##k, you can let us take care of the rest and have the kind of skin you've always wanted~!\r\n#L1#Skin Care: #i5153000##t5153000##l");
                 }
                 else if (status == 1) {
                         if (cm.haveItem(5153000)){

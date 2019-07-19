@@ -1,4 +1,4 @@
-/* Author: aaroncsn <(MapleSea Like)(Incomplete- Needs skin id)>
+/* Author: aaroncsn - MapleSea Like, Incomplete, Needs skin id
 	NPC Name: 		Laila
 	Map(s): 		The Burning Road: Ariant(2600000000)
 	Description: 	Skin Care Specialist
@@ -13,13 +13,9 @@ function start() {
 }
 
 function action(mode, type, selection) {
-	if (mode == -1) {
+	if (mode < 1) {  // disposing issue with stylishs found thanks to Vcoc
 		cm.dispose();
 	} else {
-		if (mode == 0 && status >= 0) {
-			cm.dispose();
-			return;
-		}
 		if (mode == 1)
 			status++;
 		else

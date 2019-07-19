@@ -36,7 +36,7 @@ var clearMap = 240050600;
 var minMapId = 240060000;
 var maxMapId = 240060200;
 
-var eventTime = 15;     // 15 minutes
+var eventTime = 120;     // 120 minutes
 
 var lobbyRange = [0, 0];
 
@@ -88,7 +88,7 @@ function setEventRewards(eim) {
 function afterSetup(eim) {}
 
 function setup(channel) {
-    var eim = em.newInstance("Scarga" + channel);
+    var eim = em.newInstance("Horntail" + channel);     // thanks Thora for reporting an issue with misleading event name here
     eim.setProperty("canJoin", 1);
     eim.setProperty("defeatedBoss", 0);
     eim.setProperty("defeatedHead", 0);
@@ -126,7 +126,7 @@ function scheduledTimeout(eim) {
 
 function changedMap(eim, player, mapid) {
     if (mapid < minMapId || mapid > maxMapId) {
-	if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+	if (eim.isExpeditionTeamLackingNow(true, minPlayers, player)) {
             eim.dropMessage(5, "[Expedition] Either the leader has quit the expedition or there is no longer the minimum number of members required to continue it.");
             eim.unregisterPlayer(player);
             end(eim);
@@ -143,7 +143,7 @@ function changedLeader(eim, leader) {}
 function playerDead(eim, player) {}
 
 function playerRevive(eim, player) {
-    if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+    if (eim.isExpeditionTeamLackingNow(true, minPlayers, player)) {
         eim.unregisterPlayer(player);
         eim.dropMessage(5, "[Expedition] Either the leader has quit the expedition or there is no longer the minimum number of members required to continue it.");
         end(eim);
@@ -155,7 +155,7 @@ function playerRevive(eim, player) {
 }
 
 function playerDisconnected(eim, player) {
-    if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
+    if (eim.isExpeditionTeamLackingNow(true, minPlayers, player)) {
         eim.dropMessage(5, "[Expedition] Either the leader has quit the expedition or there is no longer the minimum number of members required to continue it.");
         eim.unregisterPlayer(player);
         end(eim);

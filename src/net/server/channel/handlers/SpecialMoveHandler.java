@@ -30,7 +30,6 @@ import tools.MaplePacketCreator;
 import tools.data.input.SeekableLittleEndianAccessor;
 import client.MapleCharacter;
 import client.MapleClient;
-import client.MapleStat;
 import client.Skill;
 import client.SkillFactory;
 import constants.ServerConstants;
@@ -41,20 +40,21 @@ import constants.skills.Hero;
 import constants.skills.Paladin;
 import constants.skills.Priest;
 import constants.skills.SuperGM;
-
+import net.server.Server;
 
 public final class SpecialMoveHandler extends AbstractMaplePacketHandler {
     
     @Override
     public final void handlePacket(SeekableLittleEndianAccessor slea, MapleClient c) {
     	MapleCharacter chr = c.getPlayer();
-        chr.getAutobanManager().setTimestamp(4, slea.readInt(), 3);
+        slea.readInt();
+        chr.getAutobanManager().setTimestamp(4, Server.getInstance().getCurrentTimestamp(), 28);
         int skillid = slea.readInt();
         
         /*
         if ((!GameConstants.isPqSkillMap(chr.getMapId()) && GameConstants.isPqSkill(skillid)) || (!chr.isGM() && GameConstants.isGMSkills(skillid)) || (!GameConstants.isInJobTree(skillid, chr.getJob().getId()) && !chr.isGM())) {
         	AutobanFactory.PACKET_EDIT.alert(chr, chr.getName() + " tried to packet edit skills.");
-        	FilePrinter.printError(FilePrinter.EXPLOITS + chr.getName() + ".txt", chr.getName() + " tried to use skill " + skillid + " without it being in their job.\r\n");
+        	FilePrinter.printError(FilePrinter.EXPLOITS + chr.getName() + ".txt", chr.getName() + " tried to use skill " + skillid + " without it being in their job.");
     		c.disconnect(true, false);
             return;
         }
@@ -91,32 +91,33 @@ public final class SpecialMoveHandler extends AbstractMaplePacketHandler {
         }
         if (skillid == Hero.MONSTER_MAGNET || skillid == Paladin.MONSTER_MAGNET || skillid == DarkKnight.MONSTER_MAGNET) { // Monster Magnet
             int num = slea.readInt();
-            int mobId;
-            byte success;
             for (int i = 0; i < num; i++) {
-                mobId = slea.readInt();
-                success = slea.readByte();
-                chr.getMap().broadcastMessage(chr, MaplePacketCreator.showMagnet(mobId, success), false);
-                MapleMonster monster = chr.getMap().getMonsterByOid(mobId);
+                int mobOid = slea.readInt();
+                byte success = slea.readByte();
+                chr.getMap().broadcastMessage(chr, MaplePacketCreator.catchMonster(mobOid, success), false);
+                MapleMonster monster = chr.getMap().getMonsterByOid(mobOid);
                 if (monster != null) {
-                	if (!monster.isBoss()) {
-                		monster.switchController(chr, monster.isControllerHasAggro());
-                	}
+                    if (!monster.isBoss()) {
+                        monster.aggroClearDamages();
+                        monster.aggroMonsterDamage(chr, 1);
+                        
+                        // thanks onechord for pointing out Magnet crashing the caster (issue would actually happen upon failing to catch mob)
+                        // thanks Conrad for noticing Magnet crashing when trying to pull bosses and fixed mobs
+                        monster.aggroSwitchController(chr, true);
+                    }
                 }
             }
-            byte direction = slea.readByte();
-            chr.getMap().broadcastMessage(chr, MaplePacketCreator.showBuffeffect(chr.getId(), skillid, chr.getSkillLevel(skillid), direction), false);
+            byte direction = slea.readByte();   // thanks MedicOP for pointing some 3rd-party related issues with Magnet
+            chr.getMap().broadcastMessage(chr, MaplePacketCreator.showBuffeffect(chr.getId(), skillid, chr.getSkillLevel(skillid), 1, direction), false);
             c.announce(MaplePacketCreator.enableActions());
             return;
         } else if (skillid == Brawler.MP_RECOVERY) {// MP Recovery
             Skill s = SkillFactory.getSkill(skillid);
             MapleStatEffect ef = s.getEffect(chr.getSkillLevel(s));
-            int lose = chr.getMaxHp() / ef.getX();
-            chr.setHp(chr.getHp() - lose);
-            chr.updateSingleStat(MapleStat.HP, chr.getHp());
-            int gain = lose * (ef.getY() / 100);
-            chr.setMp(chr.getMp() + gain);
-            chr.updateSingleStat(MapleStat.MP, chr.getMp());
+            
+            int lose = chr.safeAddHP(-1 * (chr.getCurrentMaxHp() / ef.getX()));
+            int gain = -lose * (ef.getY() / 100);
+            chr.addMP(gain);
         } else if (skillid == SuperGM.HEAL_PLUS_DISPEL) {
             slea.skip(11);
             chr.getMap().broadcastMessage(chr, MaplePacketCreator.showBuffeffect(chr.getId(), skillid, chr.getSkillLevel(skillid)), false);
@@ -129,13 +130,25 @@ public final class SpecialMoveHandler extends AbstractMaplePacketHandler {
         }
         if (chr.isAlive()) {
             if (skill.getId() != Priest.MYSTIC_DOOR) {
-                skill.getEffect(skillLevel).applyTo(chr, pos);
-            } else if(chr.canDoor()) {
-                //update door lists
-                chr.cancelMagicDoor();
-                skill.getEffect(skillLevel).applyTo(chr, pos);
+                if (skill.getId() % 10000000 != 1005) {
+                    skill.getEffect(skillLevel).applyTo(chr, pos);
+                } else {
+                    skill.getEffect(skillLevel).applyEchoOfHero(chr);
+                }
             } else {
-                chr.message("Please wait 5 seconds before casting Mystic Door again.");
+                if (c.tryacquireClient()) {
+                    try {
+                        if (chr.canDoor()) {
+                            chr.cancelMagicDoor();
+                            skill.getEffect(skillLevel).applyTo(chr, pos);
+                        } else {
+                            chr.message("Please wait 5 seconds before casting Mystic Door again.");
+                        }
+                    } finally {
+                        c.releaseClient();
+                    }
+                }
+                
                 c.announce(MaplePacketCreator.enableActions());
             }
         } else {

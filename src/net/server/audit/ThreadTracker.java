@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import constants.ServerConstants;
 import net.server.audit.locks.MonitoredLockType;
 import server.TimerManager;
 import tools.FilePrinter;
@@ -153,7 +152,7 @@ public class ThreadTracker {
                                 StackTraceElement[] ste = threads.get(l).getStackTrace();
                                 if(ste.length > 0) {
                                     DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-                                    dateFormat.setTimeZone(TimeZone.getTimeZone(ServerConstants.TIMEZONE));
+                                    dateFormat.setTimeZone(TimeZone.getDefault());
                                     String df = dateFormat.format(new Date());
                                     
                                     FilePrinter.print(FilePrinter.DEADLOCK_LOCKS, printThreadLog(tt, df));
@@ -195,10 +194,10 @@ public class ThreadTracker {
                     }
                 } else {    // print status
                     DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-                    dateFormat.setTimeZone(TimeZone.getTimeZone(ServerConstants.TIMEZONE));
+                    dateFormat.setTimeZone(TimeZone.getDefault());
 
                     FilePrinter.printError(FilePrinter.DEADLOCK_STATE, printThreadTrackerState(dateFormat.format(new Date())));
-                    //FilePrinter.printError(FilePrinter.DEADLOCK_STATE, "[" + dateFormat.format(new Date()) + "] Presenting current lock path for lockid " + lockId.name() + ".\r\n" + printLockStatus(lockId) + "\r\n-------------------------------\r\n");
+                    //FilePrinter.printError(FilePrinter.DEADLOCK_STATE, "[" + dateFormat.format(new Date()) + "] Presenting current lock path for lockid " + lockId.name() + ".\r\n" + printLockStatus(lockId) + "\r\n-------------------------------");
                 }
             } else {
                 long tid = Thread.currentThread().getId();
@@ -240,7 +239,10 @@ public class ThreadTracker {
                 }
                 else {
                     AtomicInteger c = lockCount.get(lockOid);
-                    c.decrementAndGet();
+                    if (c != null) {    // thanks BHB for detecting an NPE here
+                        c.decrementAndGet();
+                    }
+                    
                     lockUpdate.put(lockOid, 0);
 
                     List<MonitoredLockType> list = threadTracker.get(tid);

@@ -20,24 +20,20 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /* Miranda
-NLC Skin Change.
+        NLC Skin Change.
 */
 var status = 0;
 var price = 1000000;
 var skin = Array(0, 1, 2, 3, 4);
 
 function start() {
-    cm.sendSimple("Well, hello! Welcome to the NLC Skin-Care! Would you like to have a firm, tight, healthy looking skin like mine?  With #b#t5153009##k, you can let us take care of the rest and have the kind of skin you've always wanted~!\r\n#L2#I already have a Coupon!#l");
+    cm.sendSimple("Well, hello! Welcome to the NLC Skin-Care! Would you like to have a firm, tight, healthy looking skin like mine?  With #b#t5153009##k, you can let us take care of the rest and have the kind of skin you've always wanted~!\r\n#L2#Skin Care: #i5153009##t5153009##l");
 }
 
 function action(mode, type, selection) {
-    if (mode == -1)
+    if (mode < 1)  // disposing issue with stylishs found thanks to Vcoc
         cm.dispose();
     else {
-        if (mode == 0 && status == 0) {
-            cm.dispose();
-            return;
-        }
         if (mode == 1)
             status++;
         else

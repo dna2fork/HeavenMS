@@ -24,7 +24,6 @@ package net.server.channel.handlers;
 import java.util.ArrayList;
 import java.util.List;
 
-import constants.ServerConstants;
 import net.AbstractMaplePacketHandler;
 import tools.MaplePacketCreator;
 import tools.data.input.SeekableLittleEndianAccessor;
@@ -35,7 +34,9 @@ import client.inventory.Equip;
 import client.inventory.MapleInventory;
 import client.inventory.MapleInventoryType;
 import client.inventory.ModifyInventory;
+import constants.ServerConstants;
 import server.MapleItemInformationProvider;
+import net.server.Server;
 
 /**
  *
@@ -59,6 +60,28 @@ class PairedQuicksort {
         do {
             while (x.getItemId() > A.get(i).getItemId()) i++;
             while (x.getItemId() < A.get(j).getItemId()) j--;
+            
+            if (i <= j) {
+                w = A.get(i);
+                A.set(i, A.get(j));
+                A.set(j, w);
+
+                i++;
+                j--;
+            }
+        } while (i <= j);
+    }
+    
+    private void PartitionByItemIdReverse(int Esq, int Dir, ArrayList<Item> A) {
+        Item x, w;
+
+        i = Esq;
+        j = Dir;
+        
+        x = A.get((i + j) / 2);
+        do {
+            while (x.getItemId() < A.get(i).getItemId()) i++;
+            while (x.getItemId() > A.get(j).getItemId()) j--;
             
             if (i <= j) {
                 w = A.get(i);
@@ -116,7 +139,7 @@ class PairedQuicksort {
     }
     
     private void PartitionByLevel(int Esq, int Dir, ArrayList<Item> A) {
-        Equip x, w, eqpI, eqpJ;
+        Equip x, w;
 
         i = Esq;
         j = Dir;
@@ -124,11 +147,9 @@ class PairedQuicksort {
         x = (Equip)(A.get((i + j) / 2));
         
         do {
-            eqpI = (Equip)A.get(i);
-            eqpJ = (Equip)A.get(j);
-            
-            while (x.getLevel() > eqpI.getLevel()) i++;
-            while (x.getLevel() < eqpJ.getLevel()) j--;
+
+            while (x.getLevel() > ((Equip)A.get(i)).getLevel()) i++;
+            while (x.getLevel() < ((Equip)A.get(j)).getLevel()) j--;
             
             if (i <= j) {
                 w = (Equip)A.get(i);
@@ -164,10 +185,64 @@ class PairedQuicksort {
         if (i < Dir) MapleQuicksort(i, Dir, A, sort);
     }
     
+    private static int getItemSubtype(Item it) {
+        return it.getItemId() / 10000;
+    }
+    
+    private int[] BinarySearchElement(ArrayList<Item> A, int rangeId) {
+        int st = 0, en = A.size() - 1;
+        
+        int mid = -1, idx = -1;
+        while (en >= st) {
+            idx = (st + en) / 2;
+            mid = getItemSubtype(A.get(idx));
+            
+            if (mid == rangeId) {
+                break;
+            } else if (mid < rangeId) {
+                st = idx + 1;
+            } else {
+                en = idx - 1;
+            }
+        }
+        
+        if (en < st) {
+            return null;
+        }
+        
+        st = idx - 1;
+        en = idx + 1;
+        while (st >= 0 && getItemSubtype(A.get(st)) == rangeId) {
+            st -= 1;
+        }
+        st += 1;
+        
+        while (en < A.size() && getItemSubtype(A.get(en)) == rangeId) {
+            en += 1;
+        }
+        en -= 1;
+        
+        return new int[]{st, en};
+    }
+    
+    public void reverseSortSublist(ArrayList<Item> A, int[] range) {
+        if (range != null) {
+            PartitionByItemIdReverse(range[0], range[1], A);
+        }
+    }
+    
     public PairedQuicksort(ArrayList<Item> A, int primarySort, int secondarySort) {
         intersect = new ArrayList<>();
         
-        if(A.size() > 0) MapleQuicksort(0, A.size() - 1, A, primarySort);
+        if(A.size() > 0) {
+            MapleQuicksort(0, A.size() - 1, A, primarySort);
+            
+            if (A.get(0).getInventoryType().equals(MapleInventoryType.USE)) {   // thanks KDA & Vcoc for suggesting stronger projectiles coming before weaker ones
+                reverseSortSublist(A, BinarySearchElement(A, 206));  // arrows
+                reverseSortSublist(A, BinarySearchElement(A, 207));  // stars
+                reverseSortSublist(A, BinarySearchElement(A, 233));  // bullets
+            }
+        }
         
         intersect.add(0);
         for(int ind = 1; ind < A.size(); ind++) {
@@ -187,7 +262,8 @@ public final class InventorySortHandler extends AbstractMaplePacketHandler {
     @Override
     public final void handlePacket(SeekableLittleEndianAccessor slea, MapleClient c) {
         MapleCharacter chr = c.getPlayer();
-        chr.getAutobanManager().setTimestamp(3, slea.readInt(), 3);
+        slea.readInt();
+        chr.getAutobanManager().setTimestamp(3, Server.getInstance().getCurrentTimestamp(), 4);
         
         if(!ServerConstants.USE_ITEM_SORT) {
             c.announce(MaplePacketCreator.enableActions());
@@ -214,8 +290,8 @@ public final class InventorySortHandler extends AbstractMaplePacketHandler {
             }
 
             for (Item item : itemarray) {
-                    inventory.removeSlot(item.getPosition());
-                    mods.add(new ModifyInventory(3, item));
+                inventory.removeSlot(item.getPosition());
+                mods.add(new ModifyInventory(3, item));
             }
 
             int invTypeCriteria = (MapleInventoryType.getByType(invType) == MapleInventoryType.EQUIP) ? 3 : 1;

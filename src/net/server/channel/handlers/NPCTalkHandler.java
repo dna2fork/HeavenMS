@@ -53,8 +53,7 @@ public final class NPCTalkHandler extends AbstractMaplePacketHandler {
             if(ServerConstants.USE_DEBUG == true) c.getPlayer().dropMessage(5, "Talking to NPC " + npc.getId());
             
             if (npc.getId() == 9010009) {   //is duey
-                c.getPlayer().setNpcCooldown(currentServerTime());
-                DueyProcessor.dueySendTalk(c);
+                DueyProcessor.dueySendTalk(c, false);
             } else {
                 if (c.getCM() != null || c.getQM() != null) {
                     c.announce(MaplePacketCreator.enableActions());
@@ -67,7 +66,7 @@ public final class NPCTalkHandler extends AbstractMaplePacketHandler {
                     boolean hasNpcScript = NPCScriptManager.getInstance().start(c, npc.getId(), oid, null);
                     if (!hasNpcScript) {
                         if (!npc.hasShop()) {
-                            FilePrinter.printError(FilePrinter.NPC_UNCODED, "NPC " + npc.getName() + "(" + npc.getId() + ") is not coded.\r\n");
+                            FilePrinter.printError(FilePrinter.NPC_UNCODED, "NPC " + npc.getName() + "(" + npc.getId() + ") is not coded.");
                             return;
                         } else if(c.getPlayer().getShop() != null) {
                             c.announce(MaplePacketCreator.enableActions());
@@ -80,11 +79,12 @@ public final class NPCTalkHandler extends AbstractMaplePacketHandler {
             }
         } else if (obj instanceof MaplePlayerNPC) {
             MaplePlayerNPC pnpc = (MaplePlayerNPC) obj;
+            NPCScriptManager nsm = NPCScriptManager.getInstance();
             
-            if(pnpc.getScriptId() < 9977777) {
-                NPCScriptManager.getInstance().start(c, pnpc.getScriptId(), "rank_user", null);
+            if (pnpc.getScriptId() < 9977777 && !nsm.isNpcScriptAvailable(c, "" + pnpc.getScriptId())) {
+                nsm.start(c, pnpc.getScriptId(), "rank_user", null);
             } else {
-                NPCScriptManager.getInstance().start(c, pnpc.getScriptId(), null);
+                nsm.start(c, pnpc.getScriptId(), null);
             }
         }
     }

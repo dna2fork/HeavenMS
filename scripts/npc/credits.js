@@ -13,7 +13,7 @@ var name_cursor, role_cursor;
 
 // new server names are to be appended at the start of the name stack, building up the chronology.
 // make sure the server names are lexicograffically equivalent to their correspondent function.
-var servers = ["HeavenMS", "MapleSolaxia", "MoopleDEV", "MetroMS", "BubblesDEV", "ThePackII", "OdinMS", "Contributors"];
+var servers = ["HeavenMS", "MapleSolaxia", "MoopleDEV", "MetroMS", "BubblesDEV", "OdinMS", "Contributors"];
 var servers_history = [];
 
 function addPerson(name, role) {
@@ -37,8 +37,11 @@ function writeServerStaff_HeavenMS() {
         addPerson("Ronan", "Developer");
         addPerson("Vcoc", "Freelance Developer");
         addPerson("Thora", "Contributor");
+        addPerson("GabrielSin", "Contributor");
+        addPerson("Masterrulax", "Contributor");
+        addPerson("MedicOP", "Adjunct Developer");
         
-        setHistory(2015, 2018);
+        setHistory(2015, 2019);
 }
 
 function writeServerStaff_MapleSolaxia() {
@@ -55,26 +58,28 @@ function writeServerStaff_MapleSolaxia() {
 }
 
 function writeServerStaff_MoopleDEV() {
-        addPerson("conan513", "Administrator");
         addPerson("kevintjuh93", "Developer");
+        addPerson("hindie93", "Contributor");
+        addPerson("JuniarZ-", "Contributor");
+        
         setHistory(2010, 2012);
 }
 
 function writeServerStaff_MetroMS() {
-        addPerson("Moogra", "Developer");
+        addPerson("David!", "Developer");
+        addPerson("XxOsirisxX", "Contributor");
+        addPerson("Generic", "Contributor");
+        
         setHistory(2009, 2010);
 }
 
 function writeServerStaff_BubblesDEV() {
-        addPerson("Deagan", "Administrator");
-        addPerson("XxOsirisxX", "Developer");
-        setHistory(2009, 2009);
-}
-
-function writeServerStaff_ThePackII() {
-        addPerson("Hofer", "Developer");
+        addPerson("David!", "Developer");
         addPerson("Moogra", "Developer");
-        setHistory(2008, 2009);
+        addPerson("XxOsirisxX", "Contributor");
+        addPerson("MrMysterious", "Contributor");
+        
+        setHistory(2009, 2009);
 }
 
 function writeServerStaff_OdinMS() {
@@ -83,16 +88,21 @@ function writeServerStaff_OdinMS() {
         addPerson("Patrick", "Developer");
         addPerson("Matze", "Developer");
         addPerson("Vimes", "Developer");
+        
         setHistory(2007, 2008);
 }
 
 function writeServerStaff_Contributors() {
+        addPerson("Jayd", "Contributor");
+        addPerson("Dragohe4rt", "Contributor");
         addPerson("Jvlaple", "Contributor");
         addPerson("Stereo", "Contributor");
+        addPerson("AngelSL", "Contributor");
         addPerson("Lerk", "Contributor");
         addPerson("Leifde", "Contributor");
         addPerson("ThreeStep", "Contributor");
         addPerson("RMZero213", "Contributor");
+        addPerson("ExtremeDevilz", "Contributor");
         addPerson("aaroncsn", "Contributor");
         addPerson("xQuasar", "Contributor");
         addPerson("Xterminator", "Contributor");

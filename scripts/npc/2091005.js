@@ -24,26 +24,27 @@
 * @Name:   So Gong
 * @Map(s): Dojo Hall
 */
-importPackage(Packages.server.maps);
+
+importPackage(Packages.constants);
 
 var disabled = false;
 var belts = Array(1132000, 1132001, 1132002, 1132003, 1132004);
 var belt_level = Array(25, 35, 45, 60, 75);
 var belt_on_inventory;
-
-/* var belt_points = Array(200, 1800, 4000, 9200, 17000); */
-var belt_points = Array(10, 90, 200, 460, 850); /* Watered down version */
+var belt_points;
 
 var status = -1;
 var selectedMenu = -1;
 var dojoWarp = 0;
 
 function start() {
-    if(disabled) {
+    if (disabled) {
         cm.sendOk("My master has requested that the dojo be #rclosed#k at this time so I can't let you in.");
         cm.dispose();
         return;
     }
+    
+    belt_points = ServerConstants.USE_FAST_DOJO_UPGRADE ? Array(10, 90, 200, 460, 850) : Array(200, 1800, 4000, 9200, 17000);
     
     belt_on_inventory = new Array();
     for (var i = 0; i < belts.length; i++) {
@@ -341,7 +342,7 @@ function action(mode, type, selection) {
                         if (mode == 0) {
                             cm.sendNext("You think you can go even higher? Good luck!");
                         } else if (cm.getPlayer().getDojoStage() == Math.floor(cm.getMapId() / 100) % 100) {
-                            cm.sendOk("Looks like you came all the way up here without recording your score. Sorry, but you can't record now.");
+                            cm.sendOk("Your score have already been recorded. Next time you get to challenge the Dojo, you'll be able to come back to this point.");
                         } else {
                             cm.sendNext("I recorded your score. If you tell me the next time you go up, you'll be able to start where you left off. Note that you will have your #rrecord erased#k if you choose to #bcontinue challenging the Dojo#k, so choose carefully.");
                             cm.getPlayer().setDojoStage(Math.floor(cm.getMapId() / 100) % 100);

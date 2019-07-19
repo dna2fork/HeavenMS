@@ -4,6 +4,9 @@ var eventTimer = 1000 * 60 * timeLimit;
 var exitMap = 105070300;
 var eventMap = 910510000;
 
+var minMapId = 910510000;
+var maxMapId = 910510000;
+
 function init(){}
 
 function setup(difficulty, lobbyId){
@@ -34,10 +37,7 @@ function scheduledTimeout(eim){
 }
 
 function playerRevive(eim, player){
-	player.setHp(50);
-	player.setStance(0);
-	eim.unregisterPlayer(player);
-	player.changeMap(exitMap);
+	player.respawn(eim, exitMap);
 	return false;
 }
 
@@ -70,9 +70,9 @@ function playerExit(eim, player){
 	player.changeMap(exitMap);
 }
 
-function changedMap(eim, player){
-	if(player.getMap().getId() < eventMap || player.getMap().getId() > next){
-		removePlayer(eim, player);
+function changedMap(eim, chr, mapid){
+	if(mapid < minMapId || mapid > maxMapId){
+		removePlayer(eim, chr);
 		eim.stopEventTimer();
 		eim.setEventCleared();
 		eim.dispose();
@@ -94,3 +94,8 @@ function clearPQ(eim){}
 function monsterKilled(mob, eim){}
 
 function allMonstersDead(eim){}
+
+// ---------- FILLER FUNCTIONS ----------
+
+function changedLeader(eim, leader) {}
+

@@ -1,6 +1,6 @@
 /*
     This file is part of the HeavenMS MapleStory Server
-    Copyleft 2016 - 2018 RonanLana
+    Copyleft (L) 2016 - 2018 RonanLana
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -41,14 +41,14 @@ public class EmptyWriteLock implements MonitoredWriteLock {
     
     private static String printThreadStack(StackTraceElement[] list) {
         DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-        dateFormat.setTimeZone(TimeZone.getTimeZone(ServerConstants.TIMEZONE));
+        dateFormat.setTimeZone(TimeZone.getDefault());
         String df = dateFormat.format(new Date());
         
         String s = "\r\n" + df + "\r\n";
         for(int i = 0; i < list.length; i++) {
             s += ("    " + list[i].toString() + "\r\n");
         }
-        s += "----------------------------";
+        s += "----------------------------\r\n\r\n";
         
         return s;
     }

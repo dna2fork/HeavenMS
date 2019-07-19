@@ -37,14 +37,18 @@ import tools.Randomizer;
 import tools.data.input.SeekableLittleEndianAccessor;
 
 /**
- * @author Jay Estrella/ Modified by kevintjuh93
+ * @author Jay Estrella
+ * @author kevintjuh93
  */
 public final class ItemRewardHandler extends AbstractMaplePacketHandler {
     @Override
     public final void handlePacket(SeekableLittleEndianAccessor slea, MapleClient c) {
         byte slot = (byte) slea.readShort();
         int itemId = slea.readInt(); // will load from xml I don't care.
-        if (c.getPlayer().getInventory(MapleInventoryType.USE).getItem(slot).getItemId() != itemId || c.getPlayer().getInventory(MapleInventoryType.USE).countById(itemId) < 1) return;
+        
+        Item it = c.getPlayer().getInventory(MapleInventoryType.USE).getItem(slot);   // null check here thanks to Thora
+        if (it == null || it.getItemId() != itemId || c.getPlayer().getInventory(MapleInventoryType.USE).countById(itemId) < 1) return;
+        
         MapleItemInformationProvider ii = MapleItemInformationProvider.getInstance();
         Pair<Integer, List<RewardItem>> rewards = ii.getItemReward(itemId);
         for (RewardItem reward : rewards.getRight()) {
@@ -60,7 +64,7 @@ public final class ItemRewardHandler extends AbstractMaplePacketHandler {
                     }
                     MapleInventoryManipulator.addFromDrop(c, item, false);
                 } else {
-                    MapleInventoryManipulator.addById(c, reward.itemid, reward.quantity);
+                    MapleInventoryManipulator.addById(c, reward.itemid, reward.quantity, "", -1);
                 }
                 MapleInventoryManipulator.removeById(c, MapleInventoryType.USE, itemId, 1, false, false);
                 if (reward.worldmsg != null) {

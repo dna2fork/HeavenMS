@@ -58,8 +58,13 @@ function action(mode, type, selection) {
             return;
         }
         
-        if(!cm.isQuestStarted(100200)) {
-            cm.sendOk("Beware, for the power of olde has not been forgotten... ");
+        if(!(cm.isQuestStarted(100200) || cm.isQuestCompleted(100200))) {   // thanks Vcoc for finding out a need of reapproval from the masters for Zakum expeditions
+            if (cm.getPlayer().getLevel() >= 50) {  // thanks Z1peR for noticing not-so-clear unmet requirements message here.
+                cm.sendOk("Beware, for the power of olde has not been forgotten... If you seek to defeat #rZakum#k someday, earn the #bChief's Residence Council#k approval foremost and then #bface the trials#k, only then you will become eligible to fight.");
+            } else {
+                cm.sendOk("Beware, for the power of olde has not been forgotten...");
+            }
+            
             cm.dispose();
             return;
         }
@@ -107,14 +112,14 @@ function action(mode, type, selection) {
             } else {
                 if(cm.haveItem(4031061) && cm.haveItem(4031062)) {
                     if(!cm.haveItem(4000082, 30)) {
-                        cm.sendOk("You have completed the trials, however there's still the need of #b30 #t4000082##k to forge the #t4001017#.");
+                        cm.sendOk("You have completed the trials, however there's still the need of #b30 #t4000082##k to forge 5 #t4001017#.");
                     } else {
                         cm.completeQuest(100201);
                         cm.gainItem(4031061, -1);
                         cm.gainItem(4031062, -1);
                         cm.gainItem(4000082, -30);
 
-                        cm.gainItem(4001017, 1);
+                        cm.gainItem(4001017, 5);
                         cm.sendNext("You #rhave completed the trials#k, from now on having my approval to challenge Zakum.");
                     }
                     

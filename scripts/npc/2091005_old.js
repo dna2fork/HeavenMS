@@ -25,7 +25,6 @@
 * @Name:   So Gong
 * @Map(s): Dojo Hall
 */
-importPackage(Packages.server.maps);
 
 var disabled = false;
 var belts = Array(1132000, 1132001, 1132002, 1132003, 1132004);
@@ -237,7 +236,7 @@ function action(mode, type, selection) {
                 if (mode == 0) {
                     cm.sendNext("You think you can go even higher? Good luck!");
                 } else if (925020000 + cm.getPlayer().getDojoStage() * 100 == cm.getMapId()) {
-                    cm.sendOk("Looks like you came all the way up here without recording your score. Sorry, but you can't record now.");
+                    cm.sendOk("Your score have already been recorded. Next time you get to challenge the Dojo, you'll be able to come back to this point.");
                 } else {
                     cm.sendNext("I recorded your score. If you tell me the next time you go up, you'll be able to start where you left off.");
                     cm.getPlayer().setDojoStage((cm.getMapId() - 925020000) / 100);

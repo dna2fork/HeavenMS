@@ -6,6 +6,10 @@ Ronan - Head Developer
 
 Vcoc - Freelance Developer
 
+Thora - Contributor
+
+GabrielSin - Contributor
+
 ---------------------------
 DISCLAIMER:
 ---------------------------
@@ -25,7 +29,7 @@ PQs:
 * HPQ/KPQ/LPQ/LMPQ/OPQ/EllinPQ/PiratePQ/MagatiaPQ/HorntailPQ/AmoriaPQ/TreasurePQ/ElnathPQ/HolidayPQ.
 * CWKPQ as Expedition-based event.
 * Expeditions: Scarga/Horntail/Showa/Balrog/Zakum/Pinkbean.
-* GuildPQ + Guild queue with multi-lobby systems available.
+* GuildPQ + Guild queue with multi-lobby system available.
 * Brand-new PQs: BossRushPQ, CafePQ.
 * Mu Lung Dojo.
 * Capt. Latanica remade as an event (parties can now fight the boss).
@@ -58,6 +62,7 @@ Player Social Network:
 
 * Guild and Alliance system fully functional.
 * Implemented Marriage system from the ground-up (excluding character packet encoding parts that were already present, proper credits given throughout the source files).
+* Marriage ring effects functional.
 * Beginners can create and join a "beginner-only" party (characters up to level 10).
 * HP bar of party members now properly calculates the HP gain from equipments.
 * Enhanced synchronization on Player Shops and Hired Merchants. Transactions made are instantly informed to the owner.
@@ -67,11 +72,15 @@ Player Social Network:
 * Further improved the server's ranking system, now displaying properly daily player ranking movement.
 * Automated support for Player NPCs and Hall of Fame.
 * Protected concurrently and improved the face expression system, guarding from trivial packet spam and exploits.
+* All upgradeable non-cash equipments in inventory with level & EXP information available for read by anyone, given proper visibility.
+* Further improved the existent minigame mechanics: remarkably checking out for no-item match requests, allowing different omok/matchcard match layouts and status update on the player matchbox tooltips.
 
 Cash & Items:
 
 * EXP/DROP/Cosmetic Coupons.
 * EXP/DROP coupons now appears as a buff effect when on active time.
+* Code coupons functional, with support for multiple items on the same code.
+* Merged unique ids for pets, rings and cash items, thus solving some cash shop inventory issues.
 * Great deal of cash items functional.
 * MapleTV mechanics stabilized and separated by world.
 * GMS-esque omok/match card drop chances.
@@ -79,7 +88,8 @@ Cash & Items:
 * Inventory system properly checks for item slot free space and ownership.
 * Storage with "Arrange Items" feature functional.
 * Close-quarters evaluation mode for items (sandbox).
-* Further improved Karma scissors mechanics.
+* Further improved Karma scissors & Untradeable items mechanics.
+* Reviewed pet/item position data inconsistency within CASH inventory.
 * Spikes on shoes.
 * Vega's spell.
 * Owl of Minerva.
@@ -98,6 +108,7 @@ Monsters, Maps & Reactors:
 * Mobs now can drop more than one of the same equipment (number of possible drops defined at droptime, uses the minimum/maximum quantity fields on DB).
 * Mobs only drops items that are visible/collectable by the player's party.
 * Redesigned HT mechanics for spawn and linked damage to the sponge.
+* Reviewed aspects of MoveLifeHandler: implemented banish move, patched MP cost not contabilized on non-skill mob moves and slightly fixed mobs dropping from footholds in certain cases.
 * Limited item count on maps, smartly expiring oldest registered items, preventing potential item flooding.
 * Implemented Zombify disease status.
 * Added Boss HP Bar for dozens of bosses (needs provided custom wz).
@@ -113,6 +124,9 @@ Monsters, Maps & Reactors:
 * Reactors pick items up smartly, checking for an option to pick up on many-items-nearby scenario.
 * Updated many scripted portals not implementing SFX properly.
 * Updated Crimsonwood, World Tour, Nihal Desert and Neo City, enabling quest completion and game progression in these areas.
+* Added world maps for Mushroom Castle, World Tour (Singapore, Malaysia and Zipangu) & Ellin Forest areas.
+* Added World Tour and Masteria continents in the world map.
+* Reviewed World Map's town/field tooltips and links from the main world map and Masteria region.
 * Giant Cake (anniversary-themed boss) drops Maple equipments, Maple scrolls, summoning bags and many more interesting items.
 
 PQ potentials:
@@ -122,13 +136,14 @@ PQ potentials:
 * Expedition system - Multiples parties can attempt on a same instance (lobbies and expeds are mutually-exclusive).
 * Guild queue system - Guilds can register themselves on a queue for the GPQ.
 * EIM Pool system - After the first instance setup, next event instances are loaded beforehand and set on a pooling queue, optimizing future loadouts.
+* Recall system - Players can rejoin the last event instance they were in before disconnection.
 
 Player potentials:
 
 * Adventurer Mount quests functional.
 * All Equipment levels up.
 * Player level rates.
-* Gain fame by quests.
+* Gain fame by quests and event instances.
 * Pet evolutions functional (not GMS-like).
 * Reviewed keybinding system.
 * Account's Character slots: either each world has it's own count or there's a shared value between all worlds.
@@ -145,6 +160,7 @@ Server potentials:
 * Enhanced AP auto-assigner: exactly matches AP with the needed for the player's current level, surplus assigned to the primary attribute.
 * Enhanced inventory check: free slots on inventory smartly fetched on demand.
 * Enhanced auto-loot handler: optimized the brute-force checks for some cash items on the player equipped inventory at every requisition.
+* Added players-appointed bestsellers item ranking system for Owl of Minerva and Cash Shop.
 * Tweaked pet/mount hunger: calculations for fullness/tiredness takes active time of the subject into account.
 * Consistent experience and meso gain system.
 * NPC crafters (equips, plates/jewels, etc) now won't take items freely if the requirement conditions are not properly met.
@@ -160,11 +176,14 @@ Server potentials:
 * Delete Character (requires ENABLE_PIC activated).
 * Smoothed up view-all-char feature, now showing properly all available characters and not disconnecting players too often.
 * Centralized getcurrenttime throughout several server handlers, boosting it's performance overall.
+* Centralized server timestamping, several timestamps received from clients are now unused, preventing some spammable exploits.
 * Autosaver (periodically saves on DB current state of every player in-game).
 * Both fixed and randomized versions of HP/MP growth rate available, regarding player job (enable one at ServerConstants). Placeholder for HP/MP washing feature.
 * Implemented methods to get the current Players' MaxHP/MaxMP method with equipment HP/MP gains already summed up.
 * Reallocated mapobjectids utilization throughout the source, preventing issues such as "NPC disappearing mysteriously after some server time" from happening.
-* Implemented old GMS statup mechanic for novices level 10 or below. Usage of the edited localhost is mandatory on this.
+* Implemented old GMS AP assigning for novices level 10 or below. Usage of the edited localhost is mandatory on this.
+* Implemented SP capping for players that passed the job upgrade level. After upgrading jobs, the missing SP amount is replenished.
+* Bypassable PIN/PIC system for players that were already authenticated and are currently loggedin and active.
 * Accounts can be created automatically when trying to login on an inexistent account -- credits to shavit.
 * Usage of Bcrypt (up-to-date) as the main password hashing algorithm, replacing old SHA's -- credits to shavit.
 
@@ -174,23 +193,28 @@ Custom NPCs:
 * Asia: scroll & rarities shop NPC.
 * Abdula: lists droppers of needed skill/mastery books.
 * Agent E: accessory crafter.
+* Dalair: automatized equipment-merger.
 * Donation Box: automatized item-buyer.
 * Coco & Ace of Hearts: C. scroll crafters.
 
-Admin/GM commands:
+Server Commands:
 
 * Server commands layered by GM levels.
 * Spawn Zakum/Horntail/Pinkbean.
 * Several new commands.
 * Rank command highlighting users either by world or server-wide.
 * Revamped command files layout -- thanks Arthur L.
+* Optimized Search command, caching search range contents and added map search functionality.
 
 External tools:
 
 * MapleArrowFetcher - Updates min/max quantity dropped on all arrows drop data, calculations based on mob level and whether it's a boss or not.
 * MapleBossHpBarFetcher - Searches the quest WZ files and reports in all relevant data regarding mobs that has a boss HP bar whilst not having a proper "boss" label.
 * MapleCashDropFetcher - Searches the DB for any CASH drop data entry and lists them on a report file.
+* MapleCodeCouponGenerator - Reads the XML recipe at the input folder and loads into the DB new coupon codes bundled with all depicted items.
 * MapleCouponInstaller - Retrieves coupon info from the WZ and makes a SQL table with it. The server will use that table to gather info regarding rates and intervals.
+* MapleDojoUpdater - Patches the dojo WZ nodes with correct script names for onUserEnter and onFirstUserEnter fields.
+* MapleEquipmentOmnileveler - Updates the equipment WZ nodes with item level information, allowing thus access for item level and EXP info for common equipments.
 * MapleIdRetriever - Two behaviors: generates a SQL table with relation (id, name) of the handbook given as input. Given a file with names, outputs a file with ids.
 * MapleInvalidItemIdFetcher - Generates a file listing all inexistent itemid's currently laying on the DB.
 * MapleInvalidItemWithNoNameFetcher - Generates two files: one listing all itemid's with inexistent name and "cash" property. And other with a prepared XML to solve the name issue.
@@ -205,6 +229,7 @@ External tools:
 * MapleReactorDropFetcher - Searches the DB for reactors with drop data and reports in reactorids that are not yet coded.
 * MapleSkillMakerFetcher - Updates the DB Maker-related tables with the current info present on the WZs.
 * MapleSkillMakerReagentIndexer - Generates a new maker table describing all stat-improvements from the Maker reagents (those empowering crystals and jewels).
+* MapleWorldmapChecker - Searches the map WZ files for map/field entries with missing tooltip informations (that would point which map the character currently is on the overworld maps).
 
 Project:
 
@@ -217,6 +242,7 @@ Project:
 * Reviewed SQL data, eliminating duplicated entries on the tables.
 * Improved login phase, using cache over DB queries.
 * Usage of HikariCP to improve the DB connection management.
+* Usage of Java Threadpool to improve runnable call management.
 * Developed many survey tools for content profiling.
 * Developed a robust anti-exploit login coordinator system.
 * Protected many flaws with login management system.
